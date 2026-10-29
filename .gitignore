@@ -1,0 +1,24 @@
+# Dépendances et sorties de build
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# Fichiers personnels Star Citizen / Logitech : jamais dans le dépôt
+*.pr0
+actionmaps.xml
+Game.log
+logbackups/
+samples/private/
+
+# Secrets (clé API UEX, etc.)
+.env
+.env.*
+*.local
+
+# Système / éditeurs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

@@ -1,0 +1,22 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions de la fenêtre principale : commandes maison, boîte de dialogue, HTTP vers les sources d'actualité et ouverture de liens.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:allow-open",
+    "opener:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://robertsspaceindustries.com/*" },
+        { "url": "https://status.robertsspaceindustries.com/*" },
+        { "url": "https://www.youtube.com/feeds/*" },
+        { "url": "https://api.star-citizen.wiki/*" },
+        { "url": "https://uexcorp.space/*" },
+        { "url": "https://api.uexcorp.space/*" }
+      ]
+    }
+  ]
+}
