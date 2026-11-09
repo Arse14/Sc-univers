@@ -29,12 +29,16 @@ export async function readFileAsDataUrl(path: string): Promise<string> {
   if (!isTauri) throw new Error("Lecture de fichier indisponible hors de l'application.");
   const b64 = await invoke<string>("read_file_base64", { path });
   const ext = path.split(".").pop()?.toLowerCase() ?? "png";
-  const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
+  const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : ext === "glb" ? "model/gltf-binary" : ext === "gltf" ? "model/gltf+json" : "image/png";
   return `data:${mime};base64,${b64}`;
 }
 
 export async function importDeviceImage(source: string, device: string): Promise<string> {
   return invoke<string>("import_device_image", { source, device });
+}
+
+export async function importDeviceModel(source: string, device: string): Promise<string> {
+  return invoke<string>("import_device_image", { source, device: device + "-model" });
 }
 
 /** Stockage JSON persistant (dossier AppData de l'application), avec repli localStorage. */

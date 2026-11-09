@@ -8,6 +8,9 @@ import { MiningPage } from "./modules/mining/MiningPage";
 import { ReputationPage } from "./modules/reputation/ReputationPage";
 import { BlueprintsPage } from "./modules/blueprints/BlueprintsPage";
 import { ComingSoon } from "./modules/common/ComingSoon";
+import { SettingsPage, DEFAULT_SETTINGS, type AppSettings } from "./modules/settings/SettingsPage";
+import { loadStore } from "./lib/tauri";
+import { useEffect } from "react";
 
 /**
  * Racine de l'application : une barre latérale et le module courant.
@@ -17,12 +20,14 @@ import { ComingSoon } from "./modules/common/ComingSoon";
  */
 export default function App() {
   const [module, setModule] = useState<ModuleId>("news");
+  useEffect(() => { loadStore<AppSettings>("settings").then((v) => { const m = (v ?? DEFAULT_SETTINGS).startModule; if (m) setModule(m); }).catch(() => undefined); }, []);
 
   return (
     <div className="app">
       <Sidebar current={module} onSelect={setModule} />
       <main className="main">
         {module === "news" && <NewsPage />}
+        {module === "settings" && <SettingsPage />}
         {module === "starter" && <StarterPage />}
         {module === "dashboard" && <DashboardPage onGo={setModule} />}
         {module === "binds" && <BindsPage />}

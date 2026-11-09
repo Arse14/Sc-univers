@@ -35,6 +35,12 @@ export interface DeviceConfig {
   /** Chemin de l'image importée (dans le dossier de l'application). */
   imagePath: string | null;
   placements: Record<string, Placement>;
+  /** Modèle 3D .glb importé par l'utilisateur (sinon modèle schématique). */
+  modelPath?: string | null;
+  /** Ancres 3D posées à la main (coordonnées locales du modèle). */
+  anchors3d?: Record<string, { x: number; y: number; z: number }>;
+  /** Vue préférée. */
+  view?: "3d" | "image";
 }
 
 /** Une entrée Star Citizen (ex. "js1_button6") et les actions qui lui sont liées. */

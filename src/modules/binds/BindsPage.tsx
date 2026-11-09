@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
-import { findScInstalls, importDeviceImage, isTauri, loadStore, pickFile, readFileAsDataUrl, readTextFile, saveStore, type ScInstall } from "../../lib/tauri";
+import { findScInstalls, importDeviceImage, importDeviceModel, isTauri, loadStore, pickFile, readFileAsDataUrl, readTextFile, saveStore, type ScInstall } from "../../lib/tauri";
 import { parsePr0, countControls } from "./parsePr0";
 import { parseActionmaps, indexByInput } from "./parseActionmaps";
 import { inputsForControl, primaryInput } from "./mapping";
 import { actionLabel, actionmapLabel } from "./labels";
 import { useGamepadDetect } from "./useGamepad";
+import { SAMPLE_X56_PR0 } from "./samplePr0";
 import { DeviceView } from "./DeviceView";
+import { Device3D, type Anchor3D } from "./three/Device3D";
+import { buildDeviceModel } from "./three/models";
 import type { ActionMaps, Device, DeviceConfig, DeviceControl, Placement, ScBinding } from "./types";
 
 interface BindsStore {
@@ -28,6 +31,7 @@ export function BindsPage() {
   const [actionmaps, setActionmaps] = useState<ActionMaps | null>(null);
   const [installs, setInstalls] = useState<ScInstall[]>([]);
   const [images, setImages] = useState<Record<string, string>>({});
+  const [models, setModels] = useState<Record<string, string>>({});
   const [devId, setDevId] = useState<string | null>(null);
   const [selId, setSelId] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState(false);
@@ -55,7 +59,7 @@ export function BindsPage() {
   }, []);
 
   async function loadProfile(path: string, base: BindsStore = store) {
-    const text = await readTextFile(path);
+    const text = path === "sample:x56" ? SAMPLE_X56_PR0 : await readTextFile(path);
     const devs = parsePr0(text);
     if (devs.length === 0) throw new Error("Aucun appareil trouvé dans ce profil.");
     setDevices(devs);
@@ -68,6 +72,8 @@ export function BindsPage() {
     for (const d of devs) {
       const p = cfg[d.id]?.imagePath;
       if (p) readFileAsDataUrl(p).then((url) => setImages((m) => ({ ...m, [d.id]: url }))).catch(() => undefined);
+      const mp = cfg[d.id]?.modelPath;
+      if (mp) readFileAsDataUrl(mp).then((url) => setModels((m) => ({ ...m, [d.id]: url }))).catch(() => undefined);
     }
   }
 
@@ -100,6 +106,30 @@ export function BindsPage() {
       await persist({ ...store, devices: { ...store.devices, [devId]: { ...(store.devices[devId] ?? defaultConfig(0)), imagePath: dest } } });
     } catch (e) { setError(String(e)); }
   };
+  const onPickModel = async () => {
+    if (!devId) return;
+    setError(null);
+    const src = await pickFile([{ name: "Modèle 3D glTF", extensions: ["glb", "gltf"] }]);
+    if (!src) return;
+    try {
+      const dest = await importDeviceModel(src, devId);
+      const url = await readFileAsDataUrl(dest);
+      setModels((m) => ({ ...m, [devId]: url }));
+      await persist({ ...store, devices: { ...store.devices, [devId]: { ...(store.devices[devId] ?? defaultConfig(0)), modelPath: dest, view: "3d" } } });
+    } catch (e) { setError(String(e)); }
+  };
+  const onPlace3D = async (id: string, a: Anchor3D) => {
+    if (!devId) return;
+    const cfg = store.devices[devId] ?? defaultConfig(0);
+    await persist({ ...store, devices: { ...store.devices, [devId]: { ...cfg, anchors3d: { ...(cfg.anchors3d ?? {}), [id]: a } } } });
+    setPlacing(false);
+  };
+  const setView = async (view: "3d" | "image") => {
+    if (!devId) return;
+    const cfg = store.devices[devId] ?? defaultConfig(0);
+    await persist({ ...store, devices: { ...store.devices, [devId]: { ...cfg, view } } });
+    finish();
+  };
   const onPlace = async (id: string, p: Placement) => {
     if (!devId) return;
     const cfg = store.devices[devId] ?? defaultConfig(0);
@@ -118,6 +148,8 @@ export function BindsPage() {
   const device = devices.find((d) => d.id === devId) ?? null;
   const cfg = device ? store.devices[device.id] ?? defaultConfig(0) : null;
   const js = cfg?.jsSlot ?? 1;
+  const has3d = !!device && (!!models[device.id] || !!buildDeviceModel(device.name));
+  const view: "3d" | "image" = cfg?.view ?? (has3d ? "3d" : "image");
   const byInput = useMemo(() => indexByInput(actionmaps?.bindings ?? []), [actionmaps]);
 
   const bindingsFor = useCallback((c: DeviceControl): { input: string; label: string; deduced: boolean; bindings: ScBinding[] }[] =>
@@ -165,7 +197,7 @@ export function BindsPage() {
         </>}
       />
 
-      {!isTauri && <Note tag="⚠ NAVIGATEUR">Tu es dans Vite sans Tauri : la lecture de fichiers est désactivée. Lance <span className="mono">npm run tauri:dev</span> pour tester avec tes vrais fichiers.</Note>}
+      {!isTauri && <Note tag="⚠ NAVIGATEUR">Tu es dans Vite sans Tauri : la lecture de fichiers est désactivée. Lance <span className="mono">npm run tauri:dev</span> pour tester avec tes vrais fichiers. <button type="button" className="btn sm" style={{ marginLeft: 8 }} onClick={() => loadProfile("sample:x56").catch((e) => setError(String(e)))}>Charger le profil X56 d'exemple</button></Note>}
       {error && <Note tag="⚠ ERREUR">{error}</Note>}
       {installs.length > 0 && !store.actionmapsPath && (
         <Note tag="ⓘ DÉTECTÉ" info>
@@ -223,25 +255,43 @@ export function BindsPage() {
             <div className="panel" style={{ flex: "1 1 600px", minWidth: 0, display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
                 <div className="label">// JS{js} — {device?.name.toUpperCase()} — {zoomed ? "ZOOM" : placing ? "PLACEMENT" : "VUE GÉNÉRALE"}</div>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <span className={"zoom-badge" + (zoomed ? " on" : "")}>{zoomed ? "ZOOM ×2.6" : "ZOOM ×1.0"}</span>
-                  <button type="button" className="btn sm" onClick={onPickImage}>{images[devId!] ? "Changer l'image" : "Importer une image"}</button>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  <div role="group" aria-label="Type de vue" style={{ display: "flex" }}>
+                    <button type="button" className={"tab" + (view === "3d" ? " active" : "")} style={{ minHeight: 34, fontSize: 11 }} aria-pressed={view === "3d"} onClick={() => setView("3d")} disabled={!has3d}>3D</button>
+                    <button type="button" className={"tab" + (view === "image" ? " active" : "")} style={{ minHeight: 34, fontSize: 11 }} aria-pressed={view === "image"} onClick={() => setView("image")}>Image</button>
+                  </div>
+                  <span className={"zoom-badge" + (zoomed ? " on" : "")}>{zoomed ? "ZOOM" : "ORBITE"}</span>
+                  {view === "image"
+                    ? <button type="button" className="btn sm" onClick={onPickImage}>{images[devId!] ? "Changer l'image" : "Importer une image"}</button>
+                    : <button type="button" className="btn sm" onClick={onPickModel}>{models[devId!] ? "Changer le modèle" : "Importer un .glb"}</button>}
                   <button type="button" className="btn sm" onClick={finish} disabled={!zoomed && !placing}>Vue générale</button>
                 </div>
               </div>
               {device && cfg && (
                 <div style={{ overflowX: "auto" }}>
-                  <DeviceView
-                    device={device} imageUrl={images[device.id] ?? null} placements={cfg.placements}
-                    selectedId={selId} zoomed={zoomed} placing={placing} actionFor={actionFor}
-                    onSelect={select} onPlace={onPlace}
-                  />
+                  {view === "3d" ? (
+                    <Device3D
+                      deviceName={device.name} modelUrl={models[device.id] ?? null}
+                      controls={device.controls.map((c) => ({ id: c.id, name: c.name }))}
+                      anchors={cfg.anchors3d ?? {}} selectedId={selId} zoomed={zoomed} placing={placing}
+                      labelFor={(id) => { const c = device.controls.find((k) => k.id === id); return c ? actionFor(c) : ""; }}
+                      onSelect={select} onPlace={onPlace3D}
+                    />
+                  ) : (
+                    <DeviceView
+                      device={device} imageUrl={images[device.id] ?? null} placements={cfg.placements}
+                      selectedId={selId} zoomed={zoomed} placing={placing} actionFor={actionFor}
+                      onSelect={select} onPlace={onPlace}
+                    />
+                  )}
                 </div>
               )}
               <div className="hint">
                 {placing
-                  ? "Clique sur l'image à l'endroit de la commande sélectionnée."
-                  : "Clique une commande : la vue zoome dessus. « Terminer le bind » revient à la vue générale. Les commandes sans position apparaissent seulement dans le registre : sélectionne-les puis « Placer sur l'image »."}
+                  ? (view === "3d" ? "Clique sur la surface du modèle à l'endroit de la commande sélectionnée." : "Clique sur l'image à l'endroit de la commande sélectionnée.")
+                  : view === "3d"
+                    ? "Le modèle tourne seul au repos. Glisse pour orbiter, molette pour zoomer, clique une commande : la caméra s'en approche. « Terminer le bind » revient à la vue générale. Pour un modèle réaliste, importe un .glb ; ses commandes se placent par clic."
+                    : "Clique une commande : la vue zoome dessus. « Terminer le bind » revient à la vue générale. Les commandes sans position apparaissent seulement dans le registre : sélectionne-les puis « Placer sur l'image »."}
               </div>
             </div>
 
@@ -290,7 +340,7 @@ export function BindsPage() {
 
                   <div style={{ marginTop: "auto", display: "flex", flexDirection: "column", gap: 10 }}>
                     <div style={{ display: "flex", gap: 10 }}>
-                      <button type="button" className="btn" style={{ flex: 1 }} onClick={() => { setPlacing(true); setZoomed(false); }} disabled={!images[devId!]}>Placer sur l'image</button>
+                      <button type="button" className="btn" style={{ flex: 1 }} onClick={() => { setPlacing(true); setZoomed(false); }} disabled={view === "image" && !images[devId!]}>{view === "3d" ? "Placer sur le modèle" : "Placer sur l'image"}</button>
                       <button type="button" className="btn" style={{ flex: 1 }} onClick={() => { resetHit(); setDetecting((v) => !v); }}>{detecting ? "Arrêter" : "Détecter la touche"}</button>
                     </div>
                     <button type="button" className="btn primary" onClick={finish} disabled={!zoomed && !placing && !detecting}>Terminer le bind ▸ vue générale</button>

@@ -1,4 +1,6 @@
-export type ModuleId = "news" | "starter" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "blueprints" | "market" | "equipment" | "map";
+import { useEffect, useState } from "react";
+
+export type ModuleId = "news" | "starter" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "blueprints" | "market" | "equipment" | "map" | "settings";
 
 interface Item {
   id: ModuleId;
@@ -18,9 +20,19 @@ const ITEMS: Item[] = [
   { id: "market", label: "Marché", ready: false },
   { id: "equipment", label: "Équipement", ready: false },
   { id: "map", label: "Carte", ready: false },
+  { id: "settings", label: "Paramètres", ready: true },
 ];
 
+function useClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
+  // Heure standard UEE : l'année en jeu est l'année réelle + 930
+  const utc = now.toISOString().slice(11, 19);
+  return { utc, year: now.getUTCFullYear() + 930 };
+}
+
 export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m: ModuleId) => void }) {
+  const clock = useClock();
   return (
     <nav className="sidebar" aria-label="Navigation principale">
       <div className="brand">
@@ -51,7 +63,8 @@ export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m
       <div className="status-box">
         <div className="label">// ÉTAT</div>
         <div style={{ fontWeight: 600, fontSize: 15 }}><span className="status-dot" />Lecture de fichiers uniquement</div>
-        <div className="mono" style={{ fontSize: 13, color: "var(--muted)" }}>v0.1.0 · NON AFFILIÉ À CIG</div>
+        <div className="telemetry"><span>UEE STD</span><b>{clock.utc} · {clock.year}</b></div>
+        <div className="mono" style={{ fontSize: 12, color: "var(--dimmer)" }}>v0.1.0 · NON AFFILIÉ À CIG</div>
         <div className="status-bar" />
       </div>
     </nav>

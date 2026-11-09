@@ -16,13 +16,14 @@ Application de bureau compagnon pour **Star Citizen** : binds joystick / HOTAS, 
 |---|---|---|
 | Actualité | ✅ | Comm-Link RSI, YouTube Star Citizen, état des serveurs. S'ouvre au lancement. |
 | Débuter | ✅ | Parcours guidé en 7 chapitres (progression sauvegardée), checklists cochables, dépannage, lexique. Touches par défaut clavier. |
-| Binds | ✅ v0 | Profil `.pr0` → commandes de l'appareil ; `actionmaps.xml` → fonctions liées ; image de l'appareil avec repères, zoom animé, placement manuel, détection de touche (API Gamepad). |
+| Binds | ✅ v1 | Profil `.pr0` → commandes ; `actionmaps.xml` → fonctions liées ; **vue 3D** (modèle schématique X56 ou `.glb` importé) avec orbite, zoom animé sur la commande, surbrillance, placement par clic ; vue image en alternative ; détection de touche (API Gamepad). |
 | Minage | ✅ | Comparatif des 13 têtes (S1/S2), stats, avantages/inconvénients, vaisseaux compatibles. |
 | Réputations | ✅ | Organisations par système (Stanton, Pyro, Nyx, événements), paliers, gains/pertes, déblocages, rivalités. |
 | Schémas | ✅ | Sources de blueprints par faction et système, Item Fabricator (achat, pose), fabrication pas à pas, matériaux et qualité. |
 | Hangar | ⏳ | Vaisseaux, loadouts, stats. |
 | Marché | ⏳ | Prix par terminal, routes (UEX 2.0). |
 | Équipement | ⏳ | Armes, armures, prix. |
+| Paramètres | ✅ | Token UEX (local), installations détectées, module de démarrage, rotation 3D, reset du parcours. |
 | Carte | ⏳ | Carte schématique (données UEX ; référence : [Starmap RSI](https://robertsspaceindustries.com/en/starmap)). |
 
 ## Stack
@@ -38,7 +39,7 @@ src/
   modules/
     news/          flux officiels (feeds.ts) et page
     starter/       parcours guidé, checklists, dépannage, lexique (starter.ts) et page
-    binds/         parsePr0, parseActionmaps, mapping (HID → jsN_…), labels FR, DeviceView, page
+    binds/         parsePr0, parseActionmaps, mapping (HID → jsN_…), labels FR, DeviceView (image), three/ (modèles 3D, Device3D), page
     mining/        données têtes (heads.ts) et page
     reputation/    factions par système (factions.ts) et page
     blueprints/    sources de schémas, fabricator, étapes (blueprints.ts) et page
