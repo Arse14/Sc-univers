@@ -4,7 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { HOVER_EMISSIVE, SELECT_EMISSIVE } from "./materials";
-import { anchorNameFor, buildDeviceModel } from "./models";
+import { ANCHOR_LABELS, anchorNameFor, buildDeviceModel } from "./models";
 import { loadStore } from "../../../lib/tauri";
 
 export interface Anchor3D { x: number; y: number; z: number }
@@ -24,6 +24,8 @@ interface Props {
   onSelect: (id: string) => void;
   onPlace: (id: string, a: Anchor3D) => void;
   onAnchorsReady?: (ids: string[]) => void;
+  /** Afficher les petites étiquettes imprimées près de chaque commande. */
+  showLabels?: boolean;
 }
 
 const W = 560, H = 440;
@@ -36,14 +38,17 @@ const ease = (t: number) => 1 - Math.pow(1 - t, 3);
  * → caméra qui s'approche en douceur, halo orange et étiquette ; mode
  * placement → clic sur la surface pour poser une ancre.
  */
-export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, zoomed, placing, labelFor, onSelect, onPlace, onAnchorsReady }: Props) {
+export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, zoomed, placing, labelFor, onSelect, onPlace, onAnchorsReady, showLabels = true }: Props) {
   const mount = useRef<HTMLDivElement>(null);
   const state = useRef<{
     renderer: THREE.WebGLRenderer; scene: THREE.Scene; camera: THREE.PerspectiveCamera; controls: OrbitControls;
     model: THREE.Group | null; anchorsByCtrl: Map<string, THREE.Object3D>; ring: THREE.Mesh; glow: THREE.Sprite;
     tween: { from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3; start: number; dur: number } | null;
-    hover: THREE.Object3D | null; raf: number; home: { pos: THREE.Vector3; target: THREE.Vector3 };
+    hover: THREE.Object3D | null; raf: number; home: { pos: THREE.Vector3; target: THREE.Vector3 }; labels?: THREE.Group;
   } | null>(null);
+  const showLabelsRef = useRef(showLabels);
+  showLabelsRef.current = showLabels;
+  useEffect(() => { const s = state.current; if (s?.labels) s.labels.visible = showLabels; }, [showLabels]);
   const [label, setLabel] = useState<{ x: number; y: number; text: string; name: string } | null>(null);
   const [ready, setReady] = useState(false);
   const autoRotatePref = useRef(true);
@@ -182,6 +187,18 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
         if (k >= 1) s.tween = null;
       }
       controls.update();
+      // étiquettes : taille constante à l'écran, masquées pour la commande sélectionnée en zoom
+      if (s.labels && s.labels.visible) {
+        const p = propsRef.current;
+        const selName = (() => { const c = p.controls.find((k) => k.id === p.selectedId); return c ? anchorNameFor(c.name) : null; })();
+        for (const sp of s.labels.children as THREE.Sprite[]) {
+          sp.getWorldPosition(tmp);
+          const d = camera.position.distanceTo(tmp);
+          const k = d * 0.02;
+          sp.scale.set(k * (sp.userData.aspect ?? 3), k, 1);
+          (sp.material as THREE.SpriteMaterial).opacity = p.zoomed ? (sp.userData.labelFor === selName ? 0 : 0.3) : 0.8;
+        }
+      }
       // marqueur de sélection : suit l'ancre, pulse
       if (s.ring.visible) {
         // taille constante à l'écran : proportionnelle à la distance caméra
@@ -228,6 +245,20 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
       s.model = model;
       s.anchorsByCtrl.clear();
       model.traverse((o) => { if (o.userData.control) s.anchorsByCtrl.set(o.userData.control, o); });
+      // étiquettes imprimées (sprites) au-dessus de chaque ancre connue
+      model.updateMatrixWorld(true);
+      const labels = new THREE.Group(); labels.name = "labels";
+      s.anchorsByCtrl.forEach((obj, name) => {
+        const text = ANCHOR_LABELS[name]; if (!text) return;
+        const box = new THREE.Box3().setFromObject(obj); const c = box.getCenter(new THREE.Vector3()); const size = box.getSize(new THREE.Vector3());
+        const sp = makeLabelSprite(text);
+        sp.position.copy(model.worldToLocal(c)); sp.position.y += Math.max(0.009, size.y * 0.6 + 0.005);
+        sp.userData.labelFor = name;
+        labels.add(sp);
+      });
+      labels.visible = showLabelsRef.current;
+      model.add(labels);
+      s.labels = labels;
       // cadrer la caméra sur le modèle
       const box = new THREE.Box3().setFromObject(model);
       const size = box.getSize(new THREE.Vector3()); const center = box.getCenter(new THREE.Vector3());
@@ -324,6 +355,27 @@ function setEmissive(obj: THREE.Object3D, color: THREE.Color | null, intensity =
     if (color) { own.emissive.copy(color); own.emissiveIntensity = intensity; }
     else { own.emissive.copy(m.userData.baseEmissive.c); own.emissiveIntensity = m.userData.baseEmissive.i; }
   });
+}
+
+/** Petite étiquette imprimée (texte cyan sur fond sombre) en sprite. */
+function makeLabelSprite(text: string): THREE.Sprite {
+  const c = document.createElement("canvas");
+  const font = "bold 44px 'Share Tech Mono', 'Consolas', monospace";
+  const g = c.getContext("2d")!;
+  g.font = font;
+  const w = Math.ceil(g.measureText(text).width) + 36; const h = 64;
+  c.width = w; c.height = h;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "rgba(6, 14, 24, 0.82)"; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = "rgba(98, 208, 255, 0.9)"; ctx.lineWidth = 3; ctx.strokeRect(1.5, 1.5, w - 3, h - 3);
+  ctx.fillStyle = "#62d0ff"; ctx.font = font; ctx.textBaseline = "middle"; ctx.textAlign = "center";
+  ctx.fillText(text, w / 2, h / 2 + 2);
+  const tex = new THREE.CanvasTexture(c); tex.needsUpdate = true; tex.anisotropy = 4;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, opacity: 0.9 }));
+  sp.scale.set(0.001, 0.001, 1); // taille réelle fixée à chaque image selon la distance caméra
+  sp.renderOrder = 8;
+  sp.userData.aspect = w / h;
+  return sp;
 }
 
 function makeGlowTexture(): THREE.Texture {

@@ -286,9 +286,9 @@ export function buildStick(): THREE.Group {
   trig.add(mesh(new THREE.BoxGeometry(0.014, 0.012, 0.009), MAT.alu, 0, -0.046, 0.002));
   trig.rotation.x = 0.18;
   grip.add(control("Trigger", 0, 0.14, -0.034, trig));
-  // D : petit bouton rond sur la face avant, au-dessus de la gâchette
-  const d = control("D", 0, 0.158, -0.031, aluButton(0.0035, 0.003));
-  d.rotation.x = -Math.PI / 2;
+  // D : bouton rond à collerette sur le flanc gauche (pouce), à mi-hauteur
+  const d = control("D", -0.0225, 0.118, 0.0, aluButton(0.005, 0.0035));
+  d.rotation.z = Math.PI / 2;
   grip.add(d);
   // C Stick : mini-stick analogique sur une potence, flanc gauche bas de la poignée
   const cstick = new THREE.Group();
@@ -304,7 +304,10 @@ export function buildStick(): THREE.Group {
   const paddle = mesh(new THREE.BoxGeometry(0.02, 0.034, 0.004), MAT.gunmetal, 0, 0, 0);
   paddle.rotation.x = 0.25;
   pinky.add(paddle);
-  pinky.add(mesh(new THREE.BoxGeometry(0.006, 0.02, 0.012), MAT.plastic, -0.016, -0.008, 0.004).rotateZ(0.5));
+  const flying = mesh(new THREE.BoxGeometry(0.005, 0.026, 0.009), MAT.plastic, -0.02, -0.004, 0.006);
+  flying.rotation.z = 0.55; flying.rotation.x = -0.3;
+  pinky.add(flying);
+  pinky.add(mesh(new THREE.SphereGeometry(0.0035, 10, 8), MAT.plastic, -0.03, 0.007, 0.004));
   grip.add(control("Pinky", -0.012, 0.06, -0.036, pinky));
 
   // Axes X/Y : ancre invisible sur le cardan
@@ -315,12 +318,37 @@ export function buildStick(): THREE.Group {
 
 // ───────────────────────── MANETTE DES GAZ ─────────────────────────
 
-/** Poignée de levier : corps « botte » profilé (z, y), largeur donnée. */
-function leverBody(width: number): THREE.Mesh {
-  return profileX([
-    [-0.075, -0.012], [-0.06, -0.03], [-0.03, -0.036], [0.04, -0.034], [0.07, -0.028],
-    [0.078, -0.006], [0.072, 0.02], [0.05, 0.03], [0.0, 0.032], [-0.045, 0.028], [-0.07, 0.014],
-  ], width, MAT.body, 0.006);
+/**
+ * Poignée de levier : coque lisse en forme de botte (comme la vraie poignée
+ * du X56) = ellipsoïde allongé et incliné + talon arrondi à l'arrière + jupe
+ * plate dessous. Nez vers l'avant (−Z), talon vers le pilote (+Z).
+ */
+function leverBody(width: number): THREE.Group {
+  const g = new THREE.Group();
+  // coque principale : ellipsoïde allongé, légèrement plus haut à l'arrière
+  const hull = mesh(new THREE.SphereGeometry(1, 40, 28), MAT.body);
+  hull.scale.set(width / 2, 0.034, 0.078);
+  hull.position.set(0, 0.0, -0.004);
+  hull.rotation.x = 0.08;
+  g.add(hull);
+  // talon arrière plus haut et arrondi (repose-paume)
+  const heel = mesh(new THREE.SphereGeometry(1, 32, 24), MAT.body);
+  heel.scale.set(width / 2 * 0.98, 0.04, 0.045);
+  heel.position.set(0, 0.004, 0.036);
+  g.add(heel);
+  // nez avant plus fin et bas
+  const nose = mesh(new THREE.SphereGeometry(1, 32, 24), MAT.body);
+  nose.scale.set(width / 2 * 0.86, 0.026, 0.04);
+  nose.position.set(0, -0.012, -0.055);
+  g.add(nose);
+  // jupe plate sous la coque (face inférieure où vivent les commandes pouce)
+  const skirt = rbox(width * 0.96, 0.012, 0.13, 0.008, MAT.plastic);
+  skirt.position.set(0, -0.03, -0.006);
+  g.add(skirt);
+  // ligne de joint de coque (rainure) et rangée de petits trous décoratifs
+  g.add(mesh(new THREE.TorusGeometry(0.0, 0.0, 1, 1), MAT.body)); // placeholder inerte
+  for (let i = 0; i < 4; i++) g.add(mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.001, 8), MAT.gloss, -width / 2 + 0.0005, 0.018 - i * 0.004, -0.04 + i * 0.022).rotateZ(Math.PI / 2));
+  return g;
 }
 
 export function buildThrottle(): THREE.Group {
@@ -362,10 +390,11 @@ export function buildThrottle(): THREE.Group {
   // --- Colonne gauche : MODE (sélecteur rotatif à levier) et inverseurs SW 1–6 ---
   const modeG = new THREE.Group();
   modeG.add(mesh(new THREE.TorusGeometry(0.014, 0.0012, 8, 48, Math.PI * 0.9), MAT.ledRing, 0, 0.0005, 0).rotateX(Math.PI / 2).rotateZ(-1.2));
-  modeG.add(cyl(0.011, 0.012, 0.008, MAT.plastic, 32));
-  const lever = mesh(new THREE.BoxGeometry(0.007, 0.006, 0.022), MAT.plastic, 0, 0.011, -0.006);
-  lever.rotation.y = 0.5;
-  modeG.add(lever);
+  modeG.add(cyl(0.012, 0.013, 0.006, MAT.plastic, 32));
+  const tri = new THREE.Shape(); tri.moveTo(-0.009, -0.008); tri.lineTo(0.009, -0.008); tri.lineTo(0, 0.012); tri.closePath();
+  const pointer = mesh(new THREE.ExtrudeGeometry(tri, { depth: 0.009, bevelEnabled: true, bevelThickness: 0.001, bevelSize: 0.001, bevelSegments: 2 }), MAT.plastic);
+  pointer.rotation.x = -Math.PI / 2; pointer.rotation.z = -0.6; pointer.position.y = 0.006;
+  modeG.add(pointer);
   root.add(control("Mode", -0.128, T + 0.003, 0.04, modeG));
   // trois inverseurs 3 positions (SW 1/2, SW 3/4, SW 5/6) avec quatre arceaux chromés
   const swX = [-0.118, -0.094, -0.07];
@@ -478,6 +507,14 @@ export function anchorNameFor(controlName: string): string {
   if (/^Rotary 2$/i.test(n)) return "G Push";
   return n;
 }
+
+/** Libellé imprimé affiché près de chaque ancre (comme les marquages du X56). */
+export const ANCHOR_LABELS: Record<string, string> = {
+  Trigger: "TRIGGER", A: "A", B: "B", D: "D", Pinky: "PINKY", H1: "H1", H2: "H2", POV: "POV", "C Stick": "C", Mode: "MODE", Twist: "TWIST", "X Axis": "X / Y",
+  E: "E", "F Push": "F", "G Push": "G", H: "H", I: "I", "SW 1": "SW 1·2", "SW 3": "SW 3·4", "SW 5": "SW 5·6",
+  "TGL 1 Up": "TGL 1", "TGL 2 Up": "TGL 2", "TGL 3 Up": "TGL 3", "TGL 4 Up": "TGL 4", H3: "H3", H4: "H4", "K1 Up": "K1", "Scroll FWD": "SCROLL",
+  "Mouse Ministick": "MINI", SLD: "SLD", "Left Throttle": "GAZ G", "Right Throttle": "GAZ D", "Rotary 3": "RTY 3", "Rotary 4": "RTY 4",
+};
 
 /** Choisit le modèle à partir du nom d'appareil du profil ("Stick", "Throttle"). */
 export function buildDeviceModel(deviceName: string): THREE.Group | null {

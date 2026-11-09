@@ -37,6 +37,7 @@ export function BindsPage() {
   const [zoomed, setZoomed] = useState(false);
   const [placing, setPlacing] = useState(false);
   const [detecting, setDetecting] = useState(false);
+  const [labels3d, setLabels3d] = useState(true);
   const [cat, setCat] = useState<string>("Tous");
   const [error, setError] = useState<string | null>(null);
   const { hit, pads, reset: resetHit } = useGamepadDetect(detecting);
@@ -261,6 +262,7 @@ export function BindsPage() {
                     <button type="button" className={"tab" + (view === "image" ? " active" : "")} style={{ minHeight: 34, fontSize: 11 }} aria-pressed={view === "image"} onClick={() => setView("image")}>Image</button>
                   </div>
                   <span className={"zoom-badge" + (zoomed ? " on" : "")}>{zoomed ? "ZOOM" : "ORBITE"}</span>
+                  {view === "3d" && <button type="button" className={"tab" + (labels3d ? " active" : "")} style={{ minHeight: 34, fontSize: 11 }} aria-pressed={labels3d} onClick={() => setLabels3d((v) => !v)}>Repères</button>}
                   {view === "image"
                     ? <button type="button" className="btn sm" onClick={onPickImage}>{images[devId!] ? "Changer l'image" : "Importer une image"}</button>
                     : <button type="button" className="btn sm" onClick={onPickModel}>{models[devId!] ? "Changer le modèle" : "Importer un .glb"}</button>}
@@ -275,7 +277,7 @@ export function BindsPage() {
                       controls={device.controls.map((c) => ({ id: c.id, name: c.name }))}
                       anchors={cfg.anchors3d ?? {}} selectedId={selId} zoomed={zoomed} placing={placing}
                       labelFor={(id) => { const c = device.controls.find((k) => k.id === id); return c ? actionFor(c) : ""; }}
-                      onSelect={select} onPlace={onPlace3D}
+                      onSelect={select} onPlace={onPlace3D} showLabels={labels3d}
                     />
                   ) : (
                     <DeviceView
