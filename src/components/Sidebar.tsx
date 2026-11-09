@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Brand, ModuleIcon } from "./Icons";
 
 export type ModuleId = "news" | "starter" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "blueprints" | "market" | "equipment" | "map" | "settings";
 
@@ -6,57 +7,65 @@ interface Item {
   id: ModuleId;
   label: string;
   ready: boolean;
+  group: "pilote" | "univers" | "systeme";
 }
 
 const ITEMS: Item[] = [
-  { id: "news", label: "Actualité", ready: true },
-  { id: "starter", label: "Débuter", ready: true },
-  { id: "dashboard", label: "Tableau de bord", ready: true },
-  { id: "binds", label: "Binds", ready: true },
-  { id: "hangar", label: "Hangar", ready: false },
-  { id: "mining", label: "Minage", ready: true },
-  { id: "reputation", label: "Réputations", ready: true },
-  { id: "blueprints", label: "Schémas", ready: true },
-  { id: "market", label: "Marché", ready: false },
-  { id: "equipment", label: "Équipement", ready: false },
-  { id: "map", label: "Carte", ready: false },
-  { id: "settings", label: "Paramètres", ready: true },
+  { id: "news", label: "Actualité", ready: true, group: "pilote" },
+  { id: "starter", label: "Débuter", ready: true, group: "pilote" },
+  { id: "dashboard", label: "Tableau de bord", ready: true, group: "pilote" },
+  { id: "binds", label: "Binds", ready: true, group: "pilote" },
+  { id: "hangar", label: "Hangar", ready: false, group: "univers" },
+  { id: "mining", label: "Minage", ready: true, group: "univers" },
+  { id: "reputation", label: "Réputations", ready: true, group: "univers" },
+  { id: "blueprints", label: "Schémas", ready: true, group: "univers" },
+  { id: "market", label: "Marché", ready: false, group: "univers" },
+  { id: "equipment", label: "Équipement", ready: false, group: "univers" },
+  { id: "map", label: "Carte", ready: false, group: "univers" },
+  { id: "settings", label: "Paramètres", ready: true, group: "systeme" },
 ];
 
-function useClock() {
+const GROUPS: { id: Item["group"]; label: string }[] = [
+  { id: "pilote", label: "PILOTE" }, { id: "univers", label: "UNIVERS" }, { id: "systeme", label: "SYSTÈME" },
+];
+
+export function useClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
   // Heure standard UEE : l'année en jeu est l'année réelle + 930
-  const utc = now.toISOString().slice(11, 19);
-  return { utc, year: now.getUTCFullYear() + 930 };
+  return { utc: now.toISOString().slice(11, 19), year: now.getUTCFullYear() + 930 };
 }
 
 export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m: ModuleId) => void }) {
   const clock = useClock();
+  let n = 0;
   return (
     <nav className="sidebar" aria-label="Navigation principale">
       <div className="brand">
-        <div className="brand-hex"><span>SC</span></div>
+        <div className="brand-mark"><Brand /></div>
         <div>
           <div className="brand-name">UNIVERS</div>
           <div className="brand-sub">COMPAGNON</div>
         </div>
       </div>
 
-      <div>
-        <div className="nav-title">// MODULES</div>
-        {ITEMS.map((it, i) => (
-          <button
-            key={it.id}
-            type="button"
-            className={"nav-item" + (current === it.id ? " active" : "")}
-            aria-current={current === it.id ? "page" : undefined}
-            onClick={() => onSelect(it.id)}
-          >
-            <span className="nav-num">{String(i + 1).padStart(2, "0")}</span>
-            <span className="nav-label">{it.label}</span>
-            {current === it.id ? <span style={{ fontSize: 12, color: "var(--amber)" }}>▸</span> : !it.ready && <span className="nav-flag">N/A</span>}
-          </button>
+      <div className="nav">
+        {GROUPS.map((g) => (
+          <div key={g.id} className="nav-group">
+            <div className="nav-title"><span>// {g.label}</span><i /></div>
+            {ITEMS.filter((it) => it.group === g.id).map((it) => {
+              n += 1;
+              const active = current === it.id;
+              return (
+                <button key={it.id} type="button" className={"nav-item" + (active ? " active" : "") + (it.ready ? "" : " soon")} aria-current={active ? "page" : undefined} onClick={() => onSelect(it.id)}>
+                  <span className="nav-num">{String(n).padStart(2, "0")}</span>
+                  <span className="nav-ico"><ModuleIcon id={it.id} /></span>
+                  <span className="nav-label">{it.label}</span>
+                  {active ? <span className="nav-caret">▸</span> : !it.ready && <span className="nav-flag">N/A</span>}
+                </button>
+              );
+            })}
+          </div>
         ))}
       </div>
 

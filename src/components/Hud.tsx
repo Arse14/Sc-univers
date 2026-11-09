@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
+import { useClock } from "./Sidebar";
 
 /** Briques d'interface partagées du thème HUD. */
 
 export function PageHeader({ crumb, title, sub, actions }: { crumb: string; title: string; sub?: ReactNode; actions?: ReactNode }) {
+  const clock = useClock();
   return (
     <>
       <div className="breadcrumb">
         <span>SC-UNIVERS ▸ <b>{crumb}</b></span>
-        <span>NODE // LOCAL</span>
+        <span className="hud-right"><span className="hud-chip"><i />LIVE</span><span>UEE {clock.utc}</span><span>NODE // LOCAL</span></span>
       </div>
       <header style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", justifyContent: "space-between", gap: 18 }}>
         <div>

@@ -10,7 +10,8 @@ import { BlueprintsPage } from "./modules/blueprints/BlueprintsPage";
 import { ComingSoon } from "./modules/common/ComingSoon";
 import { SettingsPage, DEFAULT_SETTINGS, type AppSettings } from "./modules/settings/SettingsPage";
 import { loadStore } from "./lib/tauri";
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
+import { Boot } from "./components/Boot";
 
 /**
  * Racine de l'application : une barre latérale et le module courant.
@@ -20,12 +21,16 @@ import { useEffect } from "react";
  */
 export default function App() {
   const [module, setModule] = useState<ModuleId>("news");
+  const [booted, setBooted] = useState(false);
+  const onBooted = useCallback(() => setBooted(true), []);
   useEffect(() => { loadStore<AppSettings>("settings").then((v) => { const m = (v ?? DEFAULT_SETTINGS).startModule; if (m) setModule(m); }).catch(() => undefined); }, []);
 
   return (
     <div className="app">
+      <div className="stars" aria-hidden="true" />
+      {!booted && <Boot onDone={onBooted} />}
       <Sidebar current={module} onSelect={setModule} />
-      <main className="main">
+      <main className="main" key={module}>
         {module === "news" && <NewsPage />}
         {module === "settings" && <SettingsPage />}
         {module === "starter" && <StarterPage />}

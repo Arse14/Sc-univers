@@ -1,5 +1,6 @@
 import { PageHeader, SectionHead, Note } from "../../components/Hud";
 import type { ModuleId } from "../../components/Sidebar";
+import { ModuleIcon } from "../../components/Icons";
 
 const CARDS: { id: ModuleId; title: string; text: string; ready: boolean }[] = [
   { id: "news", title: "Actualité", text: "Comm-Link RSI, vidéos YouTube Star Citizen et état des serveurs, ouverts au lancement.", ready: true },
@@ -27,6 +28,7 @@ export function DashboardPage({ onGo }: { onGo: (m: ModuleId) => void }) {
               <span className="mono" style={{ fontSize: 11, letterSpacing: ".14em", color: c.ready ? "var(--green)" : "var(--dimmer)" }}>{c.ready ? "DISPONIBLE" : "PRÉVU"}</span>
             </div>
             <div style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.5 }}>{c.text}</div>
+            <span className="card-ico"><ModuleIcon id={c.id} size={56} /></span>
           </button>
         ))}
       </div>

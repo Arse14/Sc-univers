@@ -299,3 +299,90 @@ body {
 /* ===== Horloge / télémétrie ===== */
 .telemetry { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--muted); }
 .telemetry b { color: var(--cyan); font-weight: 400; }
+
+/* =====================================================================
+   Passe graphique 2 : démarrage, icônes, transitions, cadres holographiques
+   ===================================================================== */
+
+/* ===== Étoiles qui dérivent lentement ===== */
+.app > .stars { position: fixed; inset: -20%; pointer-events: none; z-index: 0; opacity: .7;
+  background:
+    radial-gradient(1px 1px at 8% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 68%, #cfe9ff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 52% 12%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 66% 44%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 82% 78%, #ffe2b8 50%, transparent 51%), radial-gradient(1px 1px at 92% 26%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 18% 88%, #cfe9ff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 40% 40%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 74% 6%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 60% 92%, #fff 50%, transparent 51%);
+  background-size: 900px 700px; animation: drift 120s linear infinite; }
+@keyframes drift { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-180px, -120px, 0); } }
+
+/* ===== Démarrage ===== */
+.boot { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: radial-gradient(900px 600px at 50% 40%, #0b1a2b, #04070d 70%); transition: opacity .45s ease; }
+.boot.leaving { opacity: 0; pointer-events: none; }
+.boot-grid { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(98,208,255,.05) 0 1px, transparent 1px 80px), repeating-linear-gradient(0deg, rgba(98,208,255,.05) 0 1px, transparent 1px 80px); mask-image: radial-gradient(circle at 50% 50%, #000 30%, transparent 75%); }
+.boot-center { position: relative; display: flex; flex-direction: column; align-items: center; gap: 14px; width: min(560px, 90vw); }
+.boot-mark { filter: drop-shadow(0 0 18px rgba(98,208,255,.6)); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.boot-title { font-family: var(--font-display); font-size: 40px; letter-spacing: .3em; color: var(--text-bright); text-shadow: 0 0 24px rgba(98,208,255,.4); }
+.boot-sub { font-family: var(--font-mono); font-size: 12px; letter-spacing: .3em; color: var(--amber); }
+.boot-bar { width: 100%; height: 4px; margin-top: 10px; background: rgba(98,208,255,.12); position: relative; overflow: hidden; }
+.boot-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), #fff); box-shadow: 0 0 12px var(--cyan); transition: width .3s ease; }
+.boot-lines { width: 100%; min-height: 120px; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.boot-line { display: flex; gap: 10px; animation: typein .25s ease both; }
+.boot-line span { color: var(--cyan); }
+@keyframes typein { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.boot-foot { position: absolute; bottom: 24px; font-size: 11px; letter-spacing: .3em; color: var(--dim); }
+
+/* ===== Transition entre modules ===== */
+.main { animation: pagein .45s cubic-bezier(.22,.9,.3,1) both; position: relative; z-index: 1; }
+@keyframes pagein { from { opacity: 0; transform: translateY(10px); clip-path: inset(0 0 100% 0); } 60% { clip-path: inset(0 0 0 0); } to { opacity: 1; transform: none; } }
+
+/* ===== Barre de navigation : groupes, icônes ===== */
+.sidebar { z-index: 2; gap: 18px; }
+.brand-mark { filter: drop-shadow(0 0 10px rgba(98,208,255,.5)); display: flex; }
+.nav { display: flex; flex-direction: column; gap: 14px; }
+.nav-group { display: flex; flex-direction: column; }
+.nav-title { display: flex; align-items: center; gap: 10px; padding: 0 22px 8px; }
+.nav-title i { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(98,208,255,.35), transparent); }
+.nav-item { padding: 10px 18px 10px 22px; gap: 10px; }
+.nav-ico { display: inline-flex; width: 20px; color: var(--dimmer); transition: color .2s, filter .2s; }
+.nav-item:hover .nav-ico { color: var(--cyan); }
+.nav-item.active .nav-ico { color: var(--amber); filter: drop-shadow(0 0 6px rgba(255,157,46,.7)); }
+.nav-item.soon .nav-label { color: var(--dimmer); }
+.nav-caret { font-size: 12px; color: var(--amber); }
+.nav-label { font-size: 14px; }
+
+/* ===== En-tête HUD ===== */
+.hud-right { display: flex; align-items: center; gap: 18px; }
+.hud-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border: 1px solid rgba(77,255,166,.4); color: var(--green); }
+.hud-chip i { width: 6px; height: 6px; background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+.page-title { position: relative; display: inline-block; }
+.page-title::after { content: ""; position: absolute; left: 0; bottom: -6px; height: 1px; width: 100%; background: linear-gradient(90deg, var(--cyan), transparent); animation: sweep 1.2s ease both; transform-origin: left; }
+@keyframes sweep { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ===== Cadres holographiques des panneaux ===== */
+.panel { position: relative; }
+.panel::before, .panel::after { z-index: 1; }
+.panel > .frame { pointer-events: none; }
+.panel:hover { border-color: rgba(98,208,255,.38); box-shadow: inset 0 0 0 1px rgba(98,208,255,.06), 0 10px 30px rgba(0,0,0,.35), 0 0 28px rgba(98,208,255,.08); transition: border-color .25s, box-shadow .25s; }
+.panel.small:hover { transform: translateY(-1px); transition: transform .2s, border-color .25s, box-shadow .25s; }
+/* trame fine et éclat diagonal */
+.panel { background-image: linear-gradient(135deg, rgba(98,208,255,.07), transparent 38%), repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, transparent 1px 4px), linear-gradient(180deg, var(--panel), var(--panel-2)); }
+
+/* ===== Têtes de section : graduations ===== */
+.section-head .r { background: repeating-linear-gradient(90deg, rgba(98,208,255,.45) 0 1px, transparent 1px 6px), linear-gradient(90deg, rgba(98,208,255,.3), transparent); height: 3px; mask-image: linear-gradient(90deg, #000, transparent); }
+
+/* ===== Cartes du tableau de bord : icône en filigrane ===== */
+.card-ico { position: absolute; right: 14px; bottom: 10px; color: rgba(98,208,255,.12); pointer-events: none; }
+
+/* ===== Stats : coin et compteur ===== */
+.stat { overflow: hidden; }
+.stat::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 10px; height: 10px; border-right: 2px solid var(--amber); border-bottom: 2px solid var(--amber); opacity: .7; transform: none; }
+
+/* ===== Barres de défilement fines ===== */
+.main::-webkit-scrollbar { width: 8px; }
+
+/* ===== Mouvement réduit ===== */
+@media (prefers-reduced-motion: reduce) { .app > .stars, .boot-mark, .hud-chip i, .main, .page-title::after { animation: none; } }
+.sidebar { flex-basis: 276px; }
+.nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .1em; }
