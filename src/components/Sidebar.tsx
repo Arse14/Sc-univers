@@ -1,4 +1,4 @@
-export type ModuleId = "news" | "dashboard" | "binds" | "hangar" | "mining" | "market" | "equipment" | "map";
+export type ModuleId = "news" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "blueprints" | "market" | "equipment" | "map";
 
 interface Item {
   id: ModuleId;
@@ -12,6 +12,8 @@ const ITEMS: Item[] = [
   { id: "binds", label: "Binds", ready: true },
   { id: "hangar", label: "Hangar", ready: false },
   { id: "mining", label: "Minage", ready: true },
+  { id: "reputation", label: "Réputations", ready: true },
+  { id: "blueprints", label: "Schémas", ready: true },
   { id: "market", label: "Marché", ready: false },
   { id: "equipment", label: "Équipement", ready: false },
   { id: "map", label: "Carte", ready: false },

@@ -17,6 +17,8 @@ Application de bureau compagnon pour **Star Citizen** : binds joystick / HOTAS, 
 | Actualité | ✅ | Comm-Link RSI, YouTube Star Citizen, état des serveurs. S'ouvre au lancement. |
 | Binds | ✅ v0 | Profil `.pr0` → commandes de l'appareil ; `actionmaps.xml` → fonctions liées ; image de l'appareil avec repères, zoom animé, placement manuel, détection de touche (API Gamepad). |
 | Minage | ✅ | Comparatif des 13 têtes (S1/S2), stats, avantages/inconvénients, vaisseaux compatibles. |
+| Réputations | ✅ | Organisations par système (Stanton, Pyro, Nyx, événements), paliers, gains/pertes, déblocages, rivalités. |
+| Schémas | ✅ | Sources de blueprints par faction et système, Item Fabricator (achat, pose), fabrication pas à pas, matériaux et qualité. |
 | Hangar | ⏳ | Vaisseaux, loadouts, stats. |
 | Marché | ⏳ | Prix par terminal, routes (UEX 2.0). |
 | Équipement | ⏳ | Armes, armures, prix. |
@@ -36,6 +38,8 @@ src/
     news/          flux officiels (feeds.ts) et page
     binds/         parsePr0, parseActionmaps, mapping (HID → jsN_…), labels FR, DeviceView, page
     mining/        données têtes (heads.ts) et page
+    reputation/    factions par système (factions.ts) et page
+    blueprints/    sources de schémas, fabricator, étapes (blueprints.ts) et page
     dashboard/, common/
 src-tauri/
   src/lib.rs       commandes : find_sc_installs, read_text_file, read_file_base64, load/save_store, import_device_image

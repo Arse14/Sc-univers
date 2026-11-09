@@ -4,6 +4,8 @@ import { NewsPage } from "./modules/news/NewsPage";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { BindsPage } from "./modules/binds/BindsPage";
 import { MiningPage } from "./modules/mining/MiningPage";
+import { ReputationPage } from "./modules/reputation/ReputationPage";
+import { BlueprintsPage } from "./modules/blueprints/BlueprintsPage";
 import { ComingSoon } from "./modules/common/ComingSoon";
 
 /**
@@ -23,6 +25,8 @@ export default function App() {
         {module === "dashboard" && <DashboardPage onGo={setModule} />}
         {module === "binds" && <BindsPage />}
         {module === "mining" && <MiningPage />}
+        {module === "reputation" && <ReputationPage />}
+        {module === "blueprints" && <BlueprintsPage />}
         {module === "hangar" && (
           <ComingSoon
             title="Hangar"

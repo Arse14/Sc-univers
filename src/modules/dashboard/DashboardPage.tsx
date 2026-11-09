@@ -5,6 +5,8 @@ const CARDS: { id: ModuleId; title: string; text: string; ready: boolean }[] = [
   { id: "news", title: "Actualité", text: "Comm-Link RSI, vidéos YouTube Star Citizen et état des serveurs, ouverts au lancement.", ready: true },
   { id: "binds", title: "Binds", text: "Tes commandes joystick / HOTAS lues dans actionmaps.xml, affichées sur une image de ton appareil.", ready: true },
   { id: "mining", title: "Minage", text: "Comparatif des têtes de minage : taille, stats, avantages, inconvénients, vaisseaux compatibles.", ready: true },
+  { id: "reputation", title: "Réputations", text: "Organisations par système, paliers, comment monter et ce que chaque rang apporte.", ready: true },
+  { id: "blueprints", title: "Schémas", text: "Où gagner les blueprints, où les utiliser (Item Fabricator) et comment fabriquer.", ready: true },
   { id: "hangar", title: "Hangar", text: "Vaisseaux, loadouts et stats.", ready: false },
   { id: "market", title: "Marché", text: "Prix d'achat / revente par terminal, routes commerciales.", ready: false },
   { id: "equipment", title: "Équipement", text: "Armes, armures, prix et disponibilité.", ready: false },
