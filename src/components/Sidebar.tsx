@@ -21,7 +21,7 @@ const ITEMS: Item[] = [
   { id: "blueprints", label: "Schémas", ready: true, group: "univers" },
   { id: "market", label: "Marché", ready: false, group: "univers" },
   { id: "equipment", label: "Équipement", ready: false, group: "univers" },
-  { id: "map", label: "Carte", ready: false, group: "univers" },
+  { id: "map", label: "Carte", ready: true, group: "univers" },
   { id: "settings", label: "Paramètres", ready: true, group: "systeme" },
 ];
 

@@ -14,7 +14,7 @@ const CARDS: { id: ModuleId; title: string; text: string; ready: boolean }[] = [
   { id: "hangar", title: "Hangar", text: "Vaisseaux, loadouts et stats.", ready: false },
   { id: "market", title: "Marché", text: "Prix d'achat / revente par terminal, routes commerciales.", ready: false },
   { id: "equipment", title: "Équipement", text: "Armes, armures, prix et disponibilité.", ready: false },
-  { id: "map", title: "Carte", text: "Carte schématique des systèmes et des lieux.", ready: false },
+  { id: "map", title: "Carte", text: "Carte stellaire 3D : 90 systèmes, routes de saut, planètes, lunes et stations (données Starmap).", ready: true },
 ];
 
 export function DashboardPage({ onGo }: { onGo: (m: ModuleId) => void }) {

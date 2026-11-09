@@ -7,6 +7,7 @@ import { BindsPage } from "./modules/binds/BindsPage";
 import { MiningPage } from "./modules/mining/MiningPage";
 import { ReputationPage } from "./modules/reputation/ReputationPage";
 import { BlueprintsPage } from "./modules/blueprints/BlueprintsPage";
+import { MapPage } from "./modules/map/MapPage";
 import { ComingSoon } from "./modules/common/ComingSoon";
 import { SettingsPage, DEFAULT_SETTINGS, type AppSettings } from "./modules/settings/SettingsPage";
 import { loadStore } from "./lib/tauri";
@@ -72,17 +73,7 @@ export default function App() {
             ]}
           />
         )}
-        {module === "map" && (
-          <ComingSoon
-            title="Carte"
-            crumb="CARTE"
-            lines={[
-              "Carte schématique : systèmes, planètes, stations, terminaux (données UEX).",
-              "Boutiques et prix au clic sur un lieu.",
-              "Distances entre terminaux pour planifier un trajet.",
-            ]}
-          />
-        )}
+        {module === "map" && <MapPage />}
       </main>
     </div>
   );
