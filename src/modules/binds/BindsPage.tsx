@@ -48,7 +48,11 @@ export function BindsPage() {
       const saved = (await loadStore<BindsStore>(STORE_KEY)) ?? EMPTY_STORE;
       setStore(saved);
       setInstalls(await findScInstalls());
-      if (saved.profilePath) await loadProfile(saved.profilePath, saved);
+      // Sans profil importé, on affiche quand même le X56 intégré (modèle 3D + liste des commandes).
+      await loadProfile(saved.profilePath ?? "sample:x56", saved).catch(async (e) => {
+        if (saved.profilePath) { setError(`Profil introuvable (${saved.profilePath}) : ${e}. Retour au X56 intégré.`); await loadProfile("sample:x56", saved); }
+        else throw e;
+      });
       if (saved.actionmapsPath) await loadActionmaps(saved.actionmapsPath);
     })().catch((e) => setError(String(e)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -190,7 +194,7 @@ export function BindsPage() {
         crumb="COMMANDES ▸ BINDS"
         title="Binds joystick"
         sub={<>
-          PROFIL ▸ {store.profilePath ?? "aucun"} &nbsp;·&nbsp; BINDS ▸ {store.actionmapsPath ?? "aucun"}
+          PROFIL ▸ {store.profilePath && store.profilePath !== "sample:x56" ? store.profilePath : "X56 intégré (importe ton .pr0 pour tes propres noms)"} &nbsp;·&nbsp; BINDS ▸ {store.actionmapsPath ?? "aucun"}
         </>}
         actions={<>
           <button type="button" className="btn" onClick={onPickActionmaps}>Charger actionmaps.xml</button>

@@ -1,9 +1,14 @@
 import type { ReactNode } from "react";
 import { useClock } from "./Sidebar";
+import { Pic } from "./Pic";
 
 /** Briques d'interface partagées du thème HUD. */
 
-export function PageHeader({ crumb, title, sub, actions }: { crumb: string; title: string; sub?: ReactNode; actions?: ReactNode }) {
+export function PageHeader({ crumb, title, sub, actions, banner }: {
+  crumb: string; title: string; sub?: ReactNode; actions?: ReactNode;
+  /** Visuel plein cadre sous le titre : image + légende (kicker / texte). */
+  banner?: { src: string; kicker?: string; text?: ReactNode };
+}) {
   const clock = useClock();
   return (
     <>
@@ -19,6 +24,17 @@ export function PageHeader({ crumb, title, sub, actions }: { crumb: string; titl
         </div>
         {actions && <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>{actions}</div>}
       </header>
+      {banner && (
+        <div className="banner">
+          <Pic src={banner.src} ratio={null} dim />
+          {(banner.kicker || banner.text) && (
+            <div className="banner-txt">
+              {banner.kicker && <span className="k">{banner.kicker}</span>}
+              {banner.text && <span className="t">{banner.text}</span>}
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

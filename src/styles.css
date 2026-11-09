@@ -494,3 +494,39 @@ body {
 
 .strip { flex: none; }
 .main > * { flex-shrink: 0; }
+
+/* ===== Pass 4 : images ======================================== */
+.pic{position:relative;overflow:hidden;background:radial-gradient(120% 90% at 20% 0%,rgba(79,179,255,.22),transparent 55%),linear-gradient(160deg,#0b2236 0%,#061420 60%,#04101a 100%);display:block;min-height:40px}
+.pic img{position:absolute;inset:0;width:100%;height:100%;display:block;transition:opacity .6s ease,transform .8s ease}
+.pic:hover img{transform:scale(1.03)}
+.pic-fallback::before{content:"";position:absolute;inset:0;background:
+  linear-gradient(rgba(94,193,255,.07) 1px,transparent 1px) 0 0/28px 28px,
+  linear-gradient(90deg,rgba(94,193,255,.07) 1px,transparent 1px) 0 0/28px 28px;mask:radial-gradient(80% 70% at 50% 50%,#000 30%,transparent 100%)}
+.pic-fallback::after{content:"";position:absolute;right:14px;bottom:12px;width:26px;height:26px;border:1px solid rgba(94,193,255,.35);transform:rotate(45deg);opacity:.6}
+.pic-dim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,20,32,0) 30%,rgba(6,20,32,.78) 75%,rgba(6,20,32,.96) 100%)}
+.pic-cap{position:absolute;left:18px;right:18px;bottom:14px;display:flex;flex-direction:column;gap:4px}
+.pic-cap .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.24em;color:var(--rsi);text-transform:uppercase}
+.pic-cap .t{font-family:var(--font-display);font-size:18px;letter-spacing:.06em;color:#fff;text-transform:uppercase}
+
+/* Bannière sous le titre de page */
+.banner{position:relative;height:200px;border:1px solid var(--line);flex:none}
+.banner .pic{position:absolute;inset:0;aspect-ratio:auto}
+.banner .pic img{filter:saturate(.9)}
+.banner .pic-dim{background:linear-gradient(90deg,rgba(6,20,32,.92) 0%,rgba(6,20,32,.55) 45%,rgba(6,20,32,.15) 100%),linear-gradient(0deg,rgba(6,20,32,.85) 0%,transparent 45%)}
+.banner .banner-txt{position:absolute;left:26px;bottom:20px;right:26px;display:flex;flex-direction:column;gap:6px}
+.banner .banner-txt .k{font-family:var(--font-mono);font-size:10px;letter-spacing:.26em;color:var(--rsi)}
+.banner .banner-txt .t{font-size:15px;color:#e8f3ff;max-width:720px;line-height:1.45}
+.banner::after{content:"";position:absolute;right:0;top:0;width:34px;height:34px;background:linear-gradient(225deg,var(--rsi) 0 12px,transparent 12px)}
+
+/* Cartes illustrées (tableau de bord, vaisseaux, chapitres) */
+.img-card{padding:0!important;overflow:hidden}
+.img-card .pic{aspect-ratio:21 / 9}
+.img-card .img-body{padding:14px 18px 16px;display:flex;flex-direction:column;gap:8px}
+.logo-box{width:54px;height:54px;flex:none;display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px solid var(--line)}
+.logo-box .pic{width:100%;height:100%;aspect-ratio:auto;background:transparent}
+.logo-box .pic img{object-fit:contain;padding:6px}
+.logo-box .pic-fallback::before,.logo-box .pic-fallback::after{display:none}
+
+/* Vignettes des actus sans image : repli illustré */
+.strip-item .pic{width:64px;height:48px;flex:none;aspect-ratio:auto}
+.strip-item .pic-fallback::after{display:none}
