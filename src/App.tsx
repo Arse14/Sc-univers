@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sidebar, type ModuleId } from "./components/Sidebar";
 import { NewsPage } from "./modules/news/NewsPage";
+import { StarterPage } from "./modules/starter/StarterPage";
 import { DashboardPage } from "./modules/dashboard/DashboardPage";
 import { BindsPage } from "./modules/binds/BindsPage";
 import { MiningPage } from "./modules/mining/MiningPage";
@@ -22,6 +23,7 @@ export default function App() {
       <Sidebar current={module} onSelect={setModule} />
       <main className="main">
         {module === "news" && <NewsPage />}
+        {module === "starter" && <StarterPage />}
         {module === "dashboard" && <DashboardPage onGo={setModule} />}
         {module === "binds" && <BindsPage />}
         {module === "mining" && <MiningPage />}

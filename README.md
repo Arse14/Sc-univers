@@ -15,6 +15,7 @@ Application de bureau compagnon pour **Star Citizen** : binds joystick / HOTAS, 
 | Module | État | Contenu |
 |---|---|---|
 | Actualité | ✅ | Comm-Link RSI, YouTube Star Citizen, état des serveurs. S'ouvre au lancement. |
+| Débuter | ✅ | Parcours guidé en 7 chapitres (progression sauvegardée), checklists cochables, dépannage, lexique. Touches par défaut clavier. |
 | Binds | ✅ v0 | Profil `.pr0` → commandes de l'appareil ; `actionmaps.xml` → fonctions liées ; image de l'appareil avec repères, zoom animé, placement manuel, détection de touche (API Gamepad). |
 | Minage | ✅ | Comparatif des 13 têtes (S1/S2), stats, avantages/inconvénients, vaisseaux compatibles. |
 | Réputations | ✅ | Organisations par système (Stanton, Pyro, Nyx, événements), paliers, gains/pertes, déblocages, rivalités. |
@@ -36,6 +37,7 @@ src/
   lib/tauri.ts     pont vers Rust, avec repli navigateur
   modules/
     news/          flux officiels (feeds.ts) et page
+    starter/       parcours guidé, checklists, dépannage, lexique (starter.ts) et page
     binds/         parsePr0, parseActionmaps, mapping (HID → jsN_…), labels FR, DeviceView, page
     mining/        données têtes (heads.ts) et page
     reputation/    factions par système (factions.ts) et page
