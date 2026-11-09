@@ -186,11 +186,11 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
       if (s.ring.visible) {
         // taille constante à l'écran : proportionnelle à la distance caméra
         const d = camera.position.distanceTo(s.ring.position);
-        const pulse = (1 + 0.18 * Math.sin(t * 4)) * d * 7.5;
+        const pulse = (1 + 0.18 * Math.sin(t * 4)) * d * 5.5;
         s.ring.scale.setScalar(pulse);
         s.ring.lookAt(camera.position);
         (s.ring.material as THREE.MeshBasicMaterial).opacity = 0.6 + 0.35 * Math.sin(t * 4);
-        s.glow.scale.setScalar(d * (0.24 + 0.04 * Math.sin(t * 3)));
+        s.glow.scale.setScalar(d * (0.15 + 0.03 * Math.sin(t * 3)));
         // étiquette 2D projetée
         tmp.copy(s.ring.position).project(camera);
         const x = (tmp.x * 0.5 + 0.5) * W, y = (-tmp.y * 0.5 + 0.5) * H;

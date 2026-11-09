@@ -16,7 +16,7 @@ Application de bureau compagnon pour **Star Citizen** : binds joystick / HOTAS, 
 |---|---|---|
 | Actualité | ✅ | Comm-Link RSI, YouTube Star Citizen, état des serveurs. S'ouvre au lancement. |
 | Débuter | ✅ | Parcours guidé en 7 chapitres (progression sauvegardée), checklists cochables, dépannage, lexique. Touches par défaut clavier. |
-| Binds | ✅ v1 | Profil `.pr0` → commandes ; `actionmaps.xml` → fonctions liées ; **vue 3D** (modèle schématique X56 ou `.glb` importé) avec orbite, zoom animé sur la commande, surbrillance, placement par clic ; vue image en alternative ; détection de touche (API Gamepad). |
+| Binds | ✅ v1 | Profil `.pr0` → commandes ; `actionmaps.xml` → fonctions liées ; **vue 3D** (réplique procédurale du X56 d'après photos, ou `.glb` importé) avec orbite, zoom animé sur la commande, surbrillance, placement par clic ; vue image en alternative ; détection de touche (API Gamepad). |
 | Minage | ✅ | Comparatif des 13 têtes (S1/S2), stats, avantages/inconvénients, vaisseaux compatibles. |
 | Réputations | ✅ | Organisations par système (Stanton, Pyro, Nyx, événements), paliers, gains/pertes, déblocages, rivalités. |
 | Schémas | ✅ | Sources de blueprints par faction et système, Item Fabricator (achat, pose), fabrication pas à pas, matériaux et qualité. |
