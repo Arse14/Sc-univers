@@ -81,6 +81,34 @@ export function NewsPage() {
       {items.length === 0 ? (
         <div className="panel empty">{loading ? "Chargement des flux…" : "Aucune actualité à afficher."}</div>
       ) : (
+        <>
+          {/* À la une : la plus récente avec image, puis une bande de vignettes */}
+          {(() => {
+            const hero = items.find((i) => i.image) ?? items[0];
+            const rest = items.filter((i) => i.id !== hero.id);
+            return (
+              <>
+                <button type="button" className="hero" onClick={() => open(hero.url)}>
+                  {hero.image && <img src={hero.image} alt="" />}
+                  <div className="hero-body">
+                    <div className="hero-kicker">{SOURCES.find((s) => s.id === hero.source)?.short}{hero.kind ? ` · ${hero.kind.toUpperCase()}` : ""} · {when(hero.date).toUpperCase()}</div>
+                    <div className="hero-title">{hero.title}</div>
+                    {hero.summary && <div className="hero-sub">{hero.summary}</div>}
+                    <span className="btn primary hero-cta">▸ Lire sur le site officiel</span>
+                  </div>
+                </button>
+                <div className="strip" aria-label="Autres actualités">
+                  {rest.slice(0, 6).map((it) => (
+                    <button key={it.id} type="button" className="strip-item" onClick={() => open(it.url)}>
+                      {it.image ? <img src={it.image} alt="" loading="lazy" /> : <span style={{ width: 64, height: 48, background: "rgba(79,179,255,.12)" }} />}
+                      <span><span className="s">{SOURCES.find((s) => s.id === it.source)?.short}</span><br /><span className="t">{it.title}</span></span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
+          <SectionHead n="02" title="TOUTES LES ACTUALITÉS" />
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
           {items.map((it) => {
             const src = SOURCES.find((s) => s.id === it.source)!;
@@ -99,6 +127,7 @@ export function NewsPage() {
             );
           })}
         </div>
+        </>
       )}
       <div className="hint">Les liens s'ouvrent dans ton navigateur. Contenu © Cloud Imperium Games, affiché depuis les flux publics officiels.</div>
     </>
