@@ -55,5 +55,5 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: "SC-Univers ${{ github.ref_name }}"
           releaseBody: "Installeurs Windows (NSIS .exe et MSI). Non affilié à Cloud Imperium Games."
-          releaseDraft: true
+          releaseDraft: false
           prerelease: true
