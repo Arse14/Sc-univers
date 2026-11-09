@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
 import { HEADS, FAMILIES, SHIPS, DATA_VERSION, type HeadSize } from "./heads";
+import { Pic } from "../../components/Pic";
+import { MINING_HEADS, MINING_HEAD_SHIP_FALLBACK, MINING_SHIPS, SHIPS as SHIP_ART } from "../../lib/images";
 
 const fmt = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)} %`);
 const nf = (n: number) => n.toLocaleString("fr-FR");
@@ -18,7 +20,8 @@ export function MiningPage() {
 
   return (
     <>
-      <PageHeader crumb="INDUSTRIE ▸ MINAGE" title="Têtes de minage" sub="Comparatif des lasers de minage : taille, avantages, inconvénients, vaisseaux compatibles." />
+      <PageHeader crumb="INDUSTRIE ▸ MINAGE" title="Têtes de minage" sub="Comparatif des lasers de minage : taille, avantages, inconvénients, vaisseaux compatibles."
+        banner={{ src: SHIP_ART.orionMining, kicker: "MINAGE ▸ LASERS ET TÊTES", text: "Une tête de minage se choisit selon la roche : résistance, instabilité, fenêtre de charge. Sélectionne une tête dans le comparatif pour voir son rendu en jeu et ses forces." }} />
       <Note tag="⚠ DONNÉES COMMUNAUTAIRES">Valeurs issues de bases communautaires (synchronisées avec UEX), relevées sur l'{DATA_VERSION}. À revérifier après chaque patch.</Note>
 
       <section className="stat-grid" aria-label="Résumé">
@@ -30,7 +33,11 @@ export function MiningPage() {
       <SectionHead n="01" title="VAISSEAUX ET TAILLES DE TÊTE" />
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
         {SHIPS.map((s) => (
-          <div key={s.name} className="panel small" style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div key={s.name} className="panel small img-card" style={{ display: "flex", flexDirection: "column" }}>
+            <Pic src={MINING_SHIPS[s.name]} alt={s.name} ratio="21 / 9" dim>
+              <span className="pic-cap"><span className="k">{s.size}{s.count > 1 ? ` × ${s.count}` : ""} · TÊTE{s.count > 1 ? "S" : ""} DE TAILLE {s.size[1]}</span></span>
+            </Pic>
+            <div className="img-body">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
               <span className="display" style={{ fontSize: 20, letterSpacing: ".08em", color: "var(--text-bright)", textTransform: "uppercase" }}>{s.name}</span>
               <span className="mono" style={{ padding: "3px 10px", fontSize: 13, background: s.size === "S2" ? "var(--amber)" : "var(--cyan)", color: "#04101c" }}>{s.size}{s.count > 1 ? ` × ${s.count}` : ""}</span>
@@ -38,6 +45,7 @@ export function MiningPage() {
             <div style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.5 }}>{s.note}</div>
             <div className="mono" style={{ fontSize: 12, letterSpacing: ".14em", color: "var(--cyan)" }}>
               {HEADS.filter((h) => h.ships.some((n) => n.startsWith(s.name))).map((h) => h.name.toUpperCase()).join(" · ")}
+            </div>
             </div>
           </div>
         ))}
@@ -83,6 +91,9 @@ export function MiningPage() {
 
         <div className="panel" style={{ flex: "2 1 340px", minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="label">// TÊTE SÉLECTIONNÉE</div>
+          <Pic key={sel.id} src={MINING_HEADS[sel.id]} alt={sel.name} ratio="16 / 9" fit={MINING_HEAD_SHIP_FALLBACK.has(sel.id) ? "cover" : "contain"} style={{ border: "1px solid var(--line)", background: MINING_HEAD_SHIP_FALLBACK.has(sel.id) ? undefined : "radial-gradient(80% 80% at 50% 50%, rgba(79,179,255,.14), rgba(6,20,32,.9))" }}>
+            <span className="pic-cap" style={{ left: 12, bottom: 10 }}><span className="k">{MINING_HEAD_SHIP_FALLBACK.has(sel.id) ? `PAS DE RENDU PUBLIC · ${sel.ships[0].toUpperCase()} EN ACTION` : "RENDU DU TERMINAL D'ACHAT EN JEU"}</span></span>
+          </Pic>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div className="sel-hex" style={{ fontSize: 22 }}>{sel.size}</div>
             <div style={{ minWidth: 0 }}>

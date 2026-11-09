@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
+import { Pic } from "../../components/Pic";
+import { CRAFTING } from "../../lib/images";
 import { CATEGORIES, DATA_VERSION, FABRICATOR, SOURCES, STEPS, TIPS, type SystemId } from "./blueprints";
 
 const SYS: { id: SystemId; label: string }[] = [
@@ -14,7 +16,8 @@ export function BlueprintsPage() {
 
   return (
     <>
-      <PageHeader crumb="INDUSTRIE ▸ SCHÉMAS" title="Schémas" sub="Comment gagner les schémas (blueprints), où les utiliser et comment fabriquer." />
+      <PageHeader crumb="INDUSTRIE ▸ SCHÉMAS" title="Schémas" sub="Comment gagner les schémas (blueprints), où les utiliser et comment fabriquer."
+        banner={{ src: CRAFTING.fabricator, kicker: "FABRICATION ▸ ITEM FABRICATOR", text: "Un schéma débloque une recette ; l'Item Fabricator la transforme en objet à partir de matériaux. Gagne-les auprès des organisations, achète-les, ou démonte des objets." }} />
       <Note tag="⚠ DONNÉES COMMUNAUTAIRES">Relevées sur l'{DATA_VERSION}. Les lots de récompenses changent souvent : vérifie l'aperçu de récompense du contrat en jeu.</Note>
 
       <section className="stat-grid" aria-label="Résumé">
@@ -56,6 +59,13 @@ export function BlueprintsPage() {
       </section>
 
       <SectionHead n="03" title="OÙ LES UTILISER : L'ITEM FABRICATOR" />
+      <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
+        {[[CRAFTING.craftingUi, "INTERFACE ▸ FABRICATION", "Choix de la recette et des matériaux"], [CRAFTING.blueprintsUi, "INTERFACE ▸ SCHÉMAS", "Liste des schémas connus"], [CRAFTING.dismantleUi, "INTERFACE ▸ DÉMONTAGE", "Récupérer des matériaux et des schémas"]].map(([src, k, t]) => (
+          <Pic key={k} src={src} alt={t} ratio="16 / 9" dim style={{ border: "1px solid var(--line)" }}>
+            <span className="pic-cap"><span className="k">{k}</span><span className="t" style={{ fontSize: 14, textTransform: "none", letterSpacing: 0, fontFamily: "var(--font-body)" }}>{t}</span></span>
+          </Pic>
+        ))}
+      </section>
       <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
         <div className="panel small" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <div className="label">LA MACHINE</div>

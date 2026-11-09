@@ -3,6 +3,11 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { PageHeader, SectionHead, Note } from "../../components/Hud";
 import { isTauri, loadStore, saveStore } from "../../lib/tauri";
 import { SOURCES, loadSource, type NewsItem, type SourceId, type SourceResult } from "./feeds";
+import { Pic, pick } from "../../components/Pic";
+import { HERO_POOL } from "../../lib/images";
+
+/** Image de l'actualité, ou un visuel officiel (vaisseau, planète, station) choisi de façon stable selon l'article. */
+const artFor = (it: NewsItem) => it.image ?? pick(HERO_POOL, it.id);
 
 const CACHE_KEY = "news-cache";
 const CACHE_TTL_MS = 15 * 60 * 1000;
@@ -89,7 +94,7 @@ export function NewsPage() {
             return (
               <>
                 <button type="button" className="hero" onClick={() => open(hero.url)}>
-                  {hero.image && <img src={hero.image} alt="" />}
+                  <Pic src={artFor(hero)} alt="" ratio={null} style={{ position: "absolute", inset: 0 }} />
                   <div className="hero-body">
                     <div className="hero-kicker">{SOURCES.find((s) => s.id === hero.source)?.short}{hero.kind ? ` · ${hero.kind.toUpperCase()}` : ""} · {when(hero.date).toUpperCase()}</div>
                     <div className="hero-title">{hero.title}</div>
@@ -100,7 +105,7 @@ export function NewsPage() {
                 <div className="strip" aria-label="Autres actualités">
                   {rest.slice(0, 6).map((it) => (
                     <button key={it.id} type="button" className="strip-item" onClick={() => open(it.url)}>
-                      {it.image ? <img src={it.image} alt="" loading="lazy" /> : <span style={{ width: 64, height: 48, background: "rgba(79,179,255,.12)" }} />}
+                      <Pic src={artFor(it)} alt="" ratio={null} />
                       <span><span className="s">{SOURCES.find((s) => s.id === it.source)?.short}</span><br /><span className="t">{it.title}</span></span>
                     </button>
                   ))}
@@ -114,7 +119,7 @@ export function NewsPage() {
             const src = SOURCES.find((s) => s.id === it.source)!;
             return (
               <button key={it.id} type="button" className="panel small" style={{ padding: 0, textAlign: "left", color: "inherit", display: "flex", flexDirection: "column", overflow: "hidden" }} onClick={() => open(it.url)}>
-                {it.image && <img src={it.image} alt="" style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", display: "block", filter: "saturate(.85)" }} loading="lazy" />}
+                <Pic src={artFor(it)} alt="" ratio="16 / 9" style={{ width: "100%", filter: "saturate(.9)" }} />
                 <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
                     <span className="mono" style={{ fontSize: 11, letterSpacing: ".2em", color: it.source === "status" ? "var(--green)" : it.source === "youtube" ? "var(--amber)" : "var(--cyan)" }}>{src.short}{it.kind ? ` · ${it.kind.toUpperCase()}` : ""}</span>

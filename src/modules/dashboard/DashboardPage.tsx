@@ -1,6 +1,8 @@
 import { PageHeader, SectionHead, Note } from "../../components/Hud";
 import type { ModuleId } from "../../components/Sidebar";
 import { ModuleIcon } from "../../components/Icons";
+import { Pic } from "../../components/Pic";
+import { MODULE_ART, PLACES } from "../../lib/images";
 
 const CARDS: { id: ModuleId; title: string; text: string; ready: boolean }[] = [
   { id: "news", title: "Actualité", text: "Comm-Link RSI, vidéos YouTube Star Citizen et état des serveurs, ouverts au lancement.", ready: true },
@@ -18,16 +20,20 @@ const CARDS: { id: ModuleId; title: string; text: string; ready: boolean }[] = [
 export function DashboardPage({ onGo }: { onGo: (m: ModuleId) => void }) {
   return (
     <>
-      <PageHeader crumb="TABLEAU DE BORD" title="SC-Univers" sub="Compagnon de bureau pour Star Citizen. Lecture de fichiers locaux et d'APIs communautaires uniquement." />
+      <PageHeader crumb="TABLEAU DE BORD" title="SC-Univers" sub="Compagnon de bureau pour Star Citizen. Lecture de fichiers locaux et d'APIs communautaires uniquement."
+        banner={{ src: PLACES.stanton, kicker: "SYSTÈME STANTON ▸ UEE", text: "Actualité officielle, parcours guidé, binds de ton HOTAS, minage, réputations et schémas. Le hangar, le marché et la carte arrivent ensuite." }} />
       <SectionHead n="01" title="MODULES" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
         {CARDS.map((c) => (
-          <button key={c.id} type="button" className="panel small" style={{ textAlign: "left", color: "inherit", display: "flex", flexDirection: "column", gap: 10, cursor: "pointer" }} onClick={() => onGo(c.id)}>
+          <button key={c.id} type="button" className="panel small img-card" style={{ textAlign: "left", color: "inherit", display: "flex", flexDirection: "column", cursor: "pointer", opacity: c.ready ? 1 : 0.75 }} onClick={() => onGo(c.id)}>
+            <Pic src={MODULE_ART[c.id]} alt="" ratio="21 / 9" dim />
+            <div className="img-body">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span className="display" style={{ fontSize: 20, letterSpacing: ".08em", color: "var(--text-bright)", textTransform: "uppercase" }}>{c.title}</span>
               <span className="mono" style={{ fontSize: 11, letterSpacing: ".14em", color: c.ready ? "var(--green)" : "var(--dimmer)" }}>{c.ready ? "DISPONIBLE" : "PRÉVU"}</span>
             </div>
             <div style={{ fontSize: 15, color: "var(--muted)", lineHeight: 1.5 }}>{c.text}</div>
+            </div>
             <span className="card-ico"><ModuleIcon id={c.id} size={56} /></span>
           </button>
         ))}

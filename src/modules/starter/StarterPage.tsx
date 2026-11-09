@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
+import { Pic } from "../../components/Pic";
+import { STARTER_STAGES, PLACES } from "../../lib/images";
 import { loadStore, saveStore } from "../../lib/tauri";
 import { CHECKLISTS, DATA_VERSION, GLOSSARY, STAGES, TROUBLES } from "./starter";
 
@@ -34,7 +36,8 @@ export function StarterPage() {
 
   return (
     <>
-      <PageHeader crumb="DÉBUTER" title="Débuter" sub="Un parcours pas à pas pour les premières heures, des checklists, le dépannage des galères classiques et un lexique." />
+      <PageHeader crumb="DÉBUTER" title="Débuter" sub="Un parcours pas à pas pour les premières heures, des checklists, le dépannage des galères classiques et un lexique."
+        banner={{ src: PLACES.newBabbage, kicker: "PARCOURS GUIDÉ ▸ PREMIÈRES HEURES", text: "Sept chapitres, de l'habitation au premier contrat payé. Coche chaque étape : ta progression est gardée d'une session à l'autre." }} />
       <Note tag="ⓘ TOUCHES" info>{DATA_VERSION}. Si une touche ne répond pas, vérifie Options → Keybindings : elles changent à chaque gros patch.</Note>
 
       <section className="stat-grid" aria-label="Résumé">
@@ -67,8 +70,11 @@ export function StarterPage() {
             </div>
 
             <div className="panel" style={{ flex: "2 1 520px", minWidth: 0, display: "flex", flexDirection: "column", gap: 16 }}>
+              <Pic key={stage.id} src={STARTER_STAGES[stage.id]} alt="" ratio="21 / 8" dim style={{ border: "1px solid var(--line)" }}>
+                <span className="pic-cap"><span className="k">CHAPITRE {String(STAGES.indexOf(stage) + 1).padStart(2, "0")} · {stage.duration.toUpperCase()}</span><span className="t">{stage.title}</span></span>
+              </Pic>
               <div>
-                <div className="label">// CHAPITRE {String(STAGES.indexOf(stage) + 1).padStart(2, "0")}</div>
+                <div className="label">// OBJECTIF</div>
                 <div className="display" style={{ fontSize: 26, color: "var(--text-bright)", marginTop: 6 }}>{stage.title}</div>
                 <div style={{ color: "var(--muted)", marginTop: 4 }}>{stage.goal}</div>
               </div>

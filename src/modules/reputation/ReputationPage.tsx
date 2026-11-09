@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
+import { Pic } from "../../components/Pic";
+import { ORGS, PLACES } from "../../lib/images";
 import { FACTIONS, MECHANICS, SYSTEMS, type Faction, type SystemId } from "./factions";
 
 const LAW = { legal: { label: "LÉGAL", color: "var(--cyan)" }, illegal: { label: "ILLÉGAL", color: "var(--amber)" }, neutral: { label: "NEUTRE", color: "var(--muted)" } } as const;
@@ -14,7 +16,8 @@ export function ReputationPage() {
 
   return (
     <>
-      <PageHeader crumb="CARRIÈRE ▸ RÉPUTATIONS" title="Réputations" sub="Qui sont les organisations, comment monter, et ce que chaque palier apporte, système par système." />
+      <PageHeader crumb="CARRIÈRE ▸ RÉPUTATIONS" title="Réputations" sub="Qui sont les organisations, comment monter, et ce que chaque palier apporte, système par système."
+        banner={{ src: PLACES.kareah, kicker: "RÉPUTATION ▸ ORGANISATIONS ET PALIERS", text: "Chaque organisation suit ta réputation : les contrats montent en niveau et en paie à mesure que tu gagnes sa confiance. Une mission ratée ou un contrat abandonné la fait redescendre." }} />
       <Note tag="⚠ DONNÉES COMMUNAUTAIRES">Relevées sur l'{MECHANICS.version}. Les fiches marquées « à confirmer » n'ont pas de paliers documentés. À revérifier après chaque patch.</Note>
 
       <section className="stat-grid" aria-label="Résumé">
@@ -46,14 +49,22 @@ export function ReputationPage() {
                 <span className="mono" style={{ fontSize: 10, letterSpacing: ".2em", color: LAW[f.lawful].color }}>{LAW[f.lawful].label}</span>
                 {!f.verified && <span className="mono" style={{ fontSize: 10, letterSpacing: ".1em", color: "var(--dimmer)" }}>À CONFIRMER</span>}
               </div>
-              <span className="display" style={{ fontSize: 16, letterSpacing: ".04em", color: "var(--text-bright)", lineHeight: 1.2 }}>{f.name}</span>
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>{f.type}</span>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <span className="logo-box"><Pic src={ORGS[f.id]?.logo ?? ORGS[f.id]?.picture} alt="" ratio={null} fit="contain" /></span>
+                <span style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
+                  <span className="display" style={{ fontSize: 16, letterSpacing: ".04em", color: "var(--text-bright)", lineHeight: 1.2 }}>{f.name}</span>
+                  <span style={{ fontSize: 13, color: "var(--muted)" }}>{f.type}</span>
+                </span>
+              </div>
             </button>
           ))}
         </div>
 
         <div className="panel" style={{ flex: "3 1 440px", minWidth: 0, display: "flex", flexDirection: "column", gap: 18 }}>
           <div className="label">// ORGANISATION SÉLECTIONNÉE</div>
+          <Pic key={sel.id} src={ORGS[sel.id]?.picture ?? ORGS[sel.id]?.logo} alt={sel.name} ratio="21 / 9" dim style={{ border: "1px solid var(--line)" }}>
+            {ORGS[sel.id]?.logo && <span className="logo-box" style={{ position: "absolute", left: 16, bottom: 14, width: 64, height: 64, background: "rgba(6,20,32,.7)" }}><Pic src={ORGS[sel.id]!.logo} alt="" ratio={null} fit="contain" /></span>}
+          </Pic>
           <div>
             <div className="mono" style={{ fontSize: 11, letterSpacing: ".2em", color: LAW[sel.lawful].color }}>{LAW[sel.lawful].label} · {sel.type.toUpperCase()} · {sel.systems.map((s) => SYSTEMS.find((x) => x.id === s)!.label.toUpperCase()).join(" / ")}</div>
             <div className="display" style={{ fontSize: 26, lineHeight: 1.1, color: "var(--text-bright)", marginTop: 6 }}>{sel.name}</div>
