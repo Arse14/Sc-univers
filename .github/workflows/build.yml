@@ -80,8 +80,10 @@ jobs:
           RAW_PWD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           $k = ($env:RAW_KEY -replace '\s', '')
-          if ($k.Length -lt 100) { throw "Secret TAURI_SIGNING_PRIVATE_KEY absent ou incomplet ($($k.Length) caractères)" }
           $p = if ($null -eq $env:RAW_PWD) { '' } else { $env:RAW_PWD.Trim() }
+          # Si les deux secrets ont été inversés (clé collée dans le mot de passe), on corrige.
+          if ($k.Length -lt 100 -and $p.Length -ge 100) { $tmp = $k; $k = ($p -replace '\s', ''); $p = $tmp; Write-Host "Secrets inversés : corrigé." }
+          if ($k.Length -lt 100) { throw "Secret TAURI_SIGNING_PRIVATE_KEY absent ou incomplet ($($k.Length) caractères)" }
           "TAURI_SIGNING_PRIVATE_KEY=$k" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$p" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Clé chargée ($($k.Length) caractères)"
