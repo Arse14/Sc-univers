@@ -2,7 +2,10 @@ name: Build Windows
 
 # - À chaque push sur main (et à la demande) : compile l'installeur Windows
 #   et le dépose en artefact téléchargeable depuis l'onglet Actions.
-# - Sur un tag v*, ou à la demande avec un nom de tag : crée en plus une Release GitHub avec les installeurs.
+# - Sur un tag v*, ou à la demande avec un nom de tag : fixe la version de
+#   l'app d'après le tag, signe les paquets (clé TAURI_SIGNING_PRIVATE_KEY)
+#   et publie une Release GitHub avec les installeurs + latest.json, que
+#   l'application installée consulte pour se mettre à jour toute seule.
 
 on:
   push:
@@ -11,20 +14,23 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: "Publier une Release sous ce tag (ex. v0.1.0). Vide = simple artefact."
+        description: "Publier une Release sous ce tag (ex. v0.2.0). Vide = simple artefact."
         required: false
         default: ""
 
 permissions:
   contents: write
 
+env:
+  RELEASE_TAG: ${{ github.event.inputs.release_tag || (startsWith(github.ref, 'refs/tags/v') && github.ref_name) || '' }}
+
 jobs:
   windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -37,12 +43,27 @@ jobs:
 
       - run: npm ci
 
+      - name: Version depuis le tag
+        if: ${{ env.RELEASE_TAG != '' }}
+        shell: pwsh
+        run: |
+          $v = "$env:RELEASE_TAG" -replace '^v', ''
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Tag invalide : $env:RELEASE_TAG (attendu vX.Y.Z)" }
+          $conf = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          $conf.version = $v
+          $conf | ConvertTo-Json -Depth 32 | Set-Content src-tauri/tauri.conf.json -Encoding utf8
+          $pkg = Get-Content package.json -Raw | ConvertFrom-Json
+          $pkg.version = $v
+          $pkg | ConvertTo-Json -Depth 32 | Set-Content package.json -Encoding utf8
+          (Get-Content src-tauri/Cargo.toml) -replace '^version = ".*"', "version = `"$v`"" | Set-Content src-tauri/Cargo.toml
+          Write-Host "Version fixée à $v"
+
       - name: Build (artefact de test)
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && github.event.inputs.release_tag == '' }}
+        if: ${{ env.RELEASE_TAG == '' }}
         run: npm run tauri build
 
       - name: Déposer les installeurs
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && github.event.inputs.release_tag == '' }}
+        if: ${{ env.RELEASE_TAG == '' }}
         uses: actions/upload-artifact@v4
         with:
           name: SC-Univers-windows-${{ github.sha }}
@@ -51,14 +72,17 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi
           if-no-files-found: error
 
-      - name: Release
-        if: ${{ startsWith(github.ref, 'refs/tags/v') || github.event.inputs.release_tag != '' }}
+      - name: Release signée (+ latest.json pour la mise à jour auto)
+        if: ${{ env.RELEASE_TAG != '' }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.event.inputs.release_tag || github.ref_name }}
-          releaseName: "SC-Univers ${{ github.event.inputs.release_tag || github.ref_name }}"
-          releaseBody: "Installeurs Windows (NSIS .exe et MSI). Non affilié à Cloud Imperium Games."
+          tagName: ${{ env.RELEASE_TAG }}
+          releaseName: "SC-Univers ${{ env.RELEASE_TAG }}"
+          releaseBody: "Installeurs Windows (MSI recommandé, NSIS .exe). L'application installée se met à jour automatiquement. Non affilié à Cloud Imperium Games."
           releaseDraft: false
-          prerelease: true
+          prerelease: false
+          includeUpdaterJson: true

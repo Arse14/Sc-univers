@@ -14,6 +14,7 @@ import { SettingsPage, DEFAULT_SETTINGS, type AppSettings } from "./modules/sett
 import { loadStore } from "./lib/tauri";
 import { useEffect, useCallback } from "react";
 import { Boot } from "./components/Boot";
+import { UpdateBanner } from "./components/UpdateBanner";
 
 /**
  * Racine de l'application : une barre latérale et le module courant.
@@ -24,8 +25,9 @@ import { Boot } from "./components/Boot";
 export default function App() {
   const [module, setModule] = useState<ModuleId>("news");
   const [booted, setBooted] = useState(false);
+  const [autoUpdate, setAutoUpdate] = useState(true);
   const onBooted = useCallback(() => setBooted(true), []);
-  useEffect(() => { loadStore<AppSettings>("settings").then((v) => { const m = (v ?? DEFAULT_SETTINGS).startModule; if (m) setModule(m); }).catch(() => undefined); }, []);
+  useEffect(() => { loadStore<AppSettings>("settings").then((v) => { const st = { ...DEFAULT_SETTINGS, ...(v ?? {}) }; if (st.startModule) setModule(st.startModule); setAutoUpdate(st.autoUpdate); }).catch(() => undefined); }, []);
 
   return (
     <div className="app">
@@ -66,6 +68,7 @@ export default function App() {
         )}
         {module === "map" && <MapPage />}
       </main>
+      {booted && <UpdateBanner enabled={autoUpdate} />}
     </div>
   );
 }

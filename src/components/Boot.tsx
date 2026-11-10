@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { APP_VERSION } from "../lib/version";
 import { Brand } from "./Icons";
 
 const LINES = [
@@ -26,7 +27,7 @@ export function Boot({ onDone, duration = 1800 }: { onDone: () => void; duration
       <div className="boot-center">
         <div className="boot-mark"><Brand size={72} /></div>
         <div className="boot-title">SC-UNIVERS</div>
-        <div className="boot-sub">COMPAGNON STAR CITIZEN · v0.1.0</div>
+        <div className="boot-sub">COMPAGNON STAR CITIZEN · v{APP_VERSION}</div>
         <div className="boot-bar"><i style={{ width: pct + "%" }} /></div>
         <div className="boot-lines">
           {LINES.slice(0, step).map((l, i) => <div key={l} className="boot-line" style={{ animationDelay: `${i * 0.02}s` }}><span>▸</span>{l}</div>)}

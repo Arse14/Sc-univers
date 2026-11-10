@@ -1,18 +1,32 @@
 import { useEffect, useState } from "react";
 import { PageHeader, SectionHead, Note } from "../../components/Hud";
 import { findScInstalls, isTauri, loadStore, saveStore, type ScInstall } from "../../lib/tauri";
+import { checkForUpdate, installUpdate } from "../../lib/updater";
+import { APP_VERSION } from "../../lib/version";
 
 export interface AppSettings {
   uexToken: string;          // clé API UEX (saisie par l'utilisateur, stockée en local)
   startModule: "news" | "dashboard" | "binds";
   autoRotate: boolean;
+  autoUpdate: boolean;
 }
 
 const KEY = "settings";
-export const DEFAULT_SETTINGS: AppSettings = { uexToken: "", startModule: "news", autoRotate: true };
+export const DEFAULT_SETTINGS: AppSettings = { uexToken: "", startModule: "news", autoRotate: true, autoUpdate: true };
 
 export function SettingsPage() {
   const [s, setS] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [checking, setChecking] = useState(false);
+  const [updMsg, setUpdMsg] = useState<string | null>(null);
+  const checkNow = async () => {
+    setChecking(true); setUpdMsg(null);
+    try {
+      const u = await checkForUpdate();
+      if (!u) setUpdMsg("Tu as la dernière version.");
+      else { setUpdMsg(`Version ${u.version} disponible : téléchargement…`); await installUpdate((p) => setUpdMsg(p === null ? "Téléchargement…" : p < 100 ? `Téléchargement ${p} %` : "Installation, redémarrage…")); }
+    } catch (e) { setUpdMsg(`Vérification impossible : ${e}`); }
+    finally { setChecking(false); }
+  };
   const [installs, setInstalls] = useState<ScInstall[]>([]);
   const [saved, setSaved] = useState(false);
   const [showKey, setShowKey] = useState(false);
@@ -70,6 +84,20 @@ export function SettingsPage() {
             Rotation automatique au repos
           </span>
         </label>
+        <label className="field" style={{ justifyContent: "flex-end" }}>
+          <span className="label">MISES À JOUR</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 40 }}>
+            <input type="checkbox" checked={s.autoUpdate} onChange={(e) => setS({ ...s, autoUpdate: e.target.checked })} style={{ width: 18, height: 18, accentColor: "#ff9d2e" }} />
+            Vérifier au lancement et proposer l'installation
+          </span>
+        </label>
+        <div className="field" style={{ justifyContent: "flex-end" }}>
+          <span className="label">VERSION {APP_VERSION}</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" className="btn sm" onClick={checkNow} disabled={checking || !isTauri}>{checking ? "Vérification…" : "Vérifier maintenant"}</button>
+            {updMsg && <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>{updMsg}</span>}
+          </span>
+        </div>
         <div className="field" style={{ justifyContent: "flex-end" }}>
           <span className="label">PARCOURS « DÉBUTER »</span>
           <button type="button" className="btn sm" onClick={resetProgress} style={{ alignSelf: "flex-start" }}>Réinitialiser la progression</button>

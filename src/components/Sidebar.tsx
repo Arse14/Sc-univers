@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { APP_VERSION } from "../lib/version";
 import { Brand, ModuleIcon } from "./Icons";
 
 export type ModuleId = "news" | "starter" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "blueprints" | "market" | "equipment" | "map" | "settings";
@@ -73,7 +74,7 @@ export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m
         <div className="label">// ÉTAT</div>
         <div style={{ fontWeight: 600, fontSize: 15 }}><span className="status-dot" />Lecture de fichiers uniquement</div>
         <div className="telemetry"><span>UEE STD</span><b>{clock.utc} · {clock.year}</b></div>
-        <div className="mono" style={{ fontSize: 12, color: "var(--dimmer)" }}>v0.1.0 · NON AFFILIÉ À CIG</div>
+        <div className="mono" style={{ fontSize: 12, color: "var(--dimmer)" }}>v{APP_VERSION} · NON AFFILIÉ À CIG</div>
         <div className="status-bar" />
       </div>
     </nav>
