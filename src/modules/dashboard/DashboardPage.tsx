@@ -11,7 +11,7 @@ const CARDS: { id: ModuleId; title: string; text: string; ready: boolean }[] = [
   { id: "mining", title: "Minage", text: "Comparatif des têtes de minage : taille, stats, avantages, inconvénients, vaisseaux compatibles.", ready: true },
   { id: "reputation", title: "Réputations", text: "Organisations par système, paliers, comment monter et ce que chaque rang apporte.", ready: true },
   { id: "blueprints", title: "Schémas", text: "Où gagner les blueprints, où les utiliser (Item Fabricator) et comment fabriquer.", ready: true },
-  { id: "hangar", title: "Hangar", text: "Vaisseaux, loadouts et stats.", ready: false },
+  { id: "hangar", title: "Hangar", text: "Ta flotte importée depuis HangarXPLOR, catalogue complet avec stats, prix et lieux d'achat.", ready: true },
   { id: "market", title: "Marché", text: "Prix d'achat / revente par terminal, routes commerciales.", ready: false },
   { id: "equipment", title: "Équipement", text: "Armes, armures, prix et disponibilité.", ready: false },
   { id: "map", title: "Carte", text: "Carte stellaire 3D : 90 systèmes, routes de saut, planètes, lunes et stations (données Starmap).", ready: true },

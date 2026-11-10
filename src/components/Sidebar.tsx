@@ -15,7 +15,7 @@ const ITEMS: Item[] = [
   { id: "starter", label: "Débuter", ready: true, group: "pilote" },
   { id: "dashboard", label: "Tableau de bord", ready: true, group: "pilote" },
   { id: "binds", label: "Binds", ready: true, group: "pilote" },
-  { id: "hangar", label: "Hangar", ready: false, group: "univers" },
+  { id: "hangar", label: "Hangar", ready: true, group: "univers" },
   { id: "mining", label: "Minage", ready: true, group: "univers" },
   { id: "reputation", label: "Réputations", ready: true, group: "univers" },
   { id: "blueprints", label: "Schémas", ready: true, group: "univers" },

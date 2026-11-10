@@ -14,6 +14,7 @@
         { "url": "https://status.robertsspaceindustries.com/*" },
         { "url": "https://www.youtube.com/feeds/*" },
         { "url": "https://api.star-citizen.wiki/*" },
+        { "url": "https://api.fleetyards.net/*" },
         { "url": "https://uexcorp.space/*" },
         { "url": "https://api.uexcorp.space/*" }
       ]

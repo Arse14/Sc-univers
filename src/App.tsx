@@ -8,6 +8,7 @@ import { MiningPage } from "./modules/mining/MiningPage";
 import { ReputationPage } from "./modules/reputation/ReputationPage";
 import { BlueprintsPage } from "./modules/blueprints/BlueprintsPage";
 import { MapPage } from "./modules/map/MapPage";
+import { HangarPage } from "./modules/hangar/HangarPage";
 import { ComingSoon } from "./modules/common/ComingSoon";
 import { SettingsPage, DEFAULT_SETTINGS, type AppSettings } from "./modules/settings/SettingsPage";
 import { loadStore } from "./lib/tauri";
@@ -40,17 +41,7 @@ export default function App() {
         {module === "mining" && <MiningPage />}
         {module === "reputation" && <ReputationPage />}
         {module === "blueprints" && <BlueprintsPage />}
-        {module === "hangar" && (
-          <ComingSoon
-            title="Hangar"
-            crumb="HANGAR"
-            lines={[
-              "Liste de tes vaisseaux (API FleetYards / wiki) avec leurs caractéristiques.",
-              "Constructeur de loadout : composants, armes, boucliers, avec les stats.",
-              "Suivi des changements d'équipement lus dans Game.log.",
-            ]}
-          />
-        )}
+        {module === "hangar" && <HangarPage />}
         {module === "market" && (
           <ComingSoon
             title="Marché"
