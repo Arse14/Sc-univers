@@ -118,7 +118,8 @@ function parseWikiCommLinks(text: string): NewsItem[] {
       date: date ? new Date(date).toISOString() : null,
       summary: typeof d.summary === "string" ? d.summary.slice(0, 240) : undefined,
       image: img,
-      kind: [d.channel, d.category].filter(Boolean).join(" · ") || undefined,
+      // l'API renvoie parfois des objets ({ name }) ou des chaînes ; on ne garde que du texte propre
+      kind: [d.channel, d.category].map((v) => (typeof v === "string" ? v : (v as { name?: string } | null)?.name ?? "")).filter((v) => v && v !== "undefined").join(" · ") || undefined,
     };
   });
 }
