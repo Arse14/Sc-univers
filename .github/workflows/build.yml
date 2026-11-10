@@ -72,13 +72,25 @@ jobs:
             src-tauri/target/release/bundle/msi/*.msi
           if-no-files-found: error
 
+      - name: Clé de signature (nettoyage des espaces et sauts de ligne)
+        if: ${{ env.RELEASE_TAG != '' }}
+        shell: pwsh
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          RAW_PWD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          $k = ($env:RAW_KEY -replace '\s', '')
+          if ($k.Length -lt 100) { throw "Secret TAURI_SIGNING_PRIVATE_KEY absent ou incomplet ($($k.Length) caractères)" }
+          $p = if ($null -eq $env:RAW_PWD) { '' } else { $env:RAW_PWD.Trim() }
+          "TAURI_SIGNING_PRIVATE_KEY=$k" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$p" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host "Clé chargée ($($k.Length) caractères)"
+
       - name: Release signée (+ latest.json pour la mise à jour auto)
         if: ${{ env.RELEASE_TAG != '' }}
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ env.RELEASE_TAG }}
           releaseName: "SC-Univers ${{ env.RELEASE_TAG }}"
