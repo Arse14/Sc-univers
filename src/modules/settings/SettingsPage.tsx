@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageHeader, SectionHead, Note } from "../../components/Hud";
+import { setMaxFps } from "../../lib/fps";
 import { cacheClear, cacheInfo, findScInstalls, isTauri, loadStore, saveStore, type ScInstall } from "../../lib/tauri";
 import { checkForUpdate, installUpdate } from "../../lib/updater";
 import { APP_VERSION } from "../../lib/version";
@@ -33,7 +34,7 @@ export function SettingsPage() {
     findScInstalls().then(setInstalls).catch(() => undefined);
   }, []);
 
-  const save = async () => { await saveStore(KEY, s); setSaved(true); setTimeout(() => setSaved(false), 1800); };
+  const save = async () => { await saveStore(KEY, s); setMaxFps(s.fps3d); setSaved(true); setTimeout(() => setSaved(false), 1800); };
   const resetProgress = async () => { await saveStore("starter-progress", { done: {}, checks: {} }); setSaved(true); setTimeout(() => setSaved(false), 1800); };
 
   return (
@@ -80,6 +81,14 @@ export function SettingsPage() {
             <input type="checkbox" checked={s.autoRotate} onChange={(e) => setS({ ...s, autoRotate: e.target.checked })} style={{ width: 18, height: 18, accentColor: "#ff9d2e" }} />
             Rotation automatique au repos
           </span>
+        </label>
+        <label className="field">
+          <span className="label">FLUIDITÉ DE LA 3D</span>
+          <select value={s.fps3d} onChange={(e) => setS({ ...s, fps3d: Number(e.target.value) as AppSettings["fps3d"] })}>
+            <option value={30}>30 images/s — le plus économe</option>
+            <option value={60}>60 images/s — recommandé</option>
+            <option value={0}>Cadence de l'écran — le plus gourmand</option>
+          </select>
         </label>
         <label className="field" style={{ justifyContent: "flex-end" }}>
           <span className="label">MISES À JOUR</span>

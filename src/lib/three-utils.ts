@@ -8,6 +8,7 @@
  * visible (fenêtre réduite, onglet masqué, canevas hors écran).
  */
 import * as THREE from "three";
+import { maxFps } from "./fps";
 
 const TEX_KEYS = ["map", "normalMap", "roughnessMap", "metalnessMap", "aoMap", "emissiveMap", "alphaMap", "bumpMap", "envMap", "lightMap", "displacementMap", "specularMap", "clearcoatMap", "clearcoatNormalMap", "clearcoatRoughnessMap", "sheenColorMap", "transmissionMap", "thicknessMap"] as const;
 
@@ -52,9 +53,14 @@ export function destroyRenderer(renderer: THREE.WebGLRenderer) {
 /** Plafond de densité de pixels : au-delà de 1,5 le coût mémoire/GPU explose pour un gain invisible. */
 export const pixelRatio = () => Math.min(window.devicePixelRatio || 1, 1.5);
 
+/** Cadence quand la fenêtre n'a pas le focus (jeu au premier plan) : juste de quoi rester à jour. */
+const IDLE_FPS = 4;
+
 /**
- * Boucle de rendu qui ne tourne que quand `el` est réellement visible.
- * `frame(dt)` reçoit le temps écoulé en secondes (borné à 0,1 s).
+ * Boucle de rendu qui ne tourne que quand `el` est réellement visible, et
+ * jamais plus vite que nécessaire : sur un écran 165 ou 240 Hz, suivre la
+ * cadence de l'écran multiplie le travail graphique par trois ou quatre pour
+ * rien. `frame(dt)` reçoit le temps écoulé en secondes (borné à 0,1 s).
  * Renvoie la fonction d'arrêt.
  */
 export function renderLoop(el: HTMLElement, frame: (dt: number) => void): () => void {
@@ -63,6 +69,9 @@ export function renderLoop(el: HTMLElement, frame: (dt: number) => void): () => 
   const tick = (now: number) => {
     raf = 0;
     if (!running()) return;
+    const cap = document.hasFocus() ? maxFps() : IDLE_FPS;
+    // marge de 2 ms : sans elle, un écran à 60 Hz tomberait à 30 images par seconde
+    if (cap > 0 && last && now - last < 1000 / cap - 2) { raf = requestAnimationFrame(tick); return; }
     const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.016;
     last = now;
     frame(dt);

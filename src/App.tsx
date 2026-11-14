@@ -3,6 +3,7 @@ import { Sidebar, type ModuleId } from "./components/Sidebar";
 import { DEFAULT_SETTINGS, type AppSettings } from "./modules/settings/defaults";
 import { loadStore } from "./lib/tauri";
 import { useEffect, useCallback } from "react";
+import { setMaxFps } from "./lib/fps";
 import { Boot } from "./components/Boot";
 import { UpdateBanner } from "./components/UpdateBanner";
 
@@ -32,7 +33,14 @@ export default function App() {
   const [booted, setBooted] = useState(false);
   const [autoUpdate, setAutoUpdate] = useState(true);
   const onBooted = useCallback(() => setBooted(true), []);
-  useEffect(() => { loadStore<AppSettings>("settings").then((v) => { const st = { ...DEFAULT_SETTINGS, ...(v ?? {}) }; if (st.startModule) setModule(st.startModule); setAutoUpdate(st.autoUpdate); }).catch(() => undefined); }, []);
+  useEffect(() => { loadStore<AppSettings>("settings").then((v) => { const st = { ...DEFAULT_SETTINGS, ...(v ?? {}) }; if (st.startModule) setModule(st.startModule); setAutoUpdate(st.autoUpdate); setMaxFps(st.fps3d); }).catch(() => undefined); }, []);
+  // fenêtre sans le focus (jeu au premier plan) : on suspend les animations en boucle
+  useEffect(() => {
+    const sync = () => document.documentElement.classList.toggle("app-idle", !document.hasFocus() || document.hidden);
+    sync();
+    window.addEventListener("focus", sync); window.addEventListener("blur", sync); document.addEventListener("visibilitychange", sync);
+    return () => { window.removeEventListener("focus", sync); window.removeEventListener("blur", sync); document.removeEventListener("visibilitychange", sync); };
+  }, []);
 
   return (
     <div className="app">
