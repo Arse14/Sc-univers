@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FAMILIES, GAME_VERSION, MAP_BY_NAME, searchActions, type ScAction } from "./actions";
+import { FAMILIES, GAME_VERSION, MAP_BY_NAME, domainOf, searchActions, type ScAction } from "./actions";
 import type { ScBinding } from "./types";
 
 const MAX_ROWS = 80;
@@ -69,7 +69,7 @@ export function ActionPicker({ input, controlLabel, isAxis, bindings, onPick, on
               <button key={`${a.map}/${a.name}`} type="button" role="option" aria-selected={here} className={"picker-row" + (here ? " here" : "")} onClick={() => onPick(a)} disabled={here}>
                 <span style={{ minWidth: 0 }}>
                   <span className="picker-name">{a.label}</span>
-                  <span className="picker-meta mono">{MAP_BY_NAME.get(a.map)?.label ?? a.map} · {a.name}{a.mode ? ` · ${a.mode}` : ""}</span>
+                  <span className="picker-meta mono"><span className="dom-chip" style={{ ["--dc" as string]: domainOf(a.map).color }}><i />{domainOf(a.map).label.toUpperCase()}</span> · {MAP_BY_NAME.get(a.map)?.label ?? a.map}{a.mode ? ` · ${a.mode}` : ""}</span>
                 </span>
                 <span className="picker-tags mono">
                   {a.axis && <span className="hud-chip">AXE</span>}

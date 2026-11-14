@@ -630,3 +630,26 @@ body {
 .fit-size{flex:none;width:30px;font-size:11px;color:var(--rsi)}
 .fit-name{display:block;font-weight:600;font-size:14px;color:var(--text-bright)}
 .fit-meta{display:block;font-size:10px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+
+/* Binds : catalogue des commandes du jeu par domaine */
+.cmd-domains{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.cmd-domain{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;background:rgba(6,20,32,.6);border:1px solid var(--line);border-left:3px solid var(--dc);color:var(--text);font:inherit;text-align:left;cursor:pointer}
+.cmd-domain:hover{background:rgba(79,179,255,.08)}
+.cmd-domain.active{background:color-mix(in srgb,var(--dc) 20%,transparent);border-color:var(--dc)}
+.cmd-domain-name{font-weight:600;font-size:15px;color:var(--text-bright)}
+.cmd-domain-n{font-size:11px;letter-spacing:.08em;color:var(--muted)}
+.cmd-list{max-height:640px;overflow-y:auto;border:1px solid var(--line);display:flex;flex-direction:column}
+.cmd-group-head{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:8px 14px;background:#0b2233;border-left:3px solid var(--dc);border-bottom:1px solid var(--line)}
+.cmd-group-head .display{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-bright)}
+.cmd-group-head .mono{font-size:10px;letter-spacing:.14em;color:var(--muted);white-space:nowrap}
+.cmd-row{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr) auto;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid rgba(98,208,255,.08);border-left:3px solid transparent}
+.cmd-row.bound{border-left-color:var(--dc);background:rgba(79,179,255,.04)}
+.cmd-name{display:block;font-weight:600;font-size:15px;color:var(--text-bright)}
+.cmd-meta{display:block;font-size:11px;letter-spacing:.06em;color:var(--dim)}
+.cmd-bind{min-width:0;font-size:13px}
+.cmd-chip{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:3px 4px 3px 10px;border:1px solid var(--rsi);background:rgba(79,179,255,.12);color:var(--text-bright);font-family:var(--font-mono);font-size:12px}
+.cmd-chip>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cmd-none{color:var(--dim);font-size:13px}
+.dom-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;white-space:nowrap}
+.dom-chip i{width:8px;height:8px;flex:none;background:var(--dc)}
+@media (max-width:900px){.cmd-row{grid-template-columns:minmax(0,1fr)}}

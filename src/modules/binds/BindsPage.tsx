@@ -5,6 +5,8 @@ import { parsePr0, countControls } from "./parsePr0";
 import { parseActionmaps, indexByInput } from "./parseActionmaps";
 import { inputsForControl, primaryInput } from "./mapping";
 import { actionLabel, actionmapLabel } from "./labels";
+import { DOMAINS, domainOf } from "./actions";
+import { CommandCatalog } from "./CommandCatalog";
 import { useGamepadDetect } from "./useGamepad";
 import { ActionPicker } from "./ActionPicker";
 import type { ScAction } from "./actions";
@@ -196,13 +198,13 @@ export function BindsPage() {
   // ----- gestion des touches -----
   const original = actionmaps?.bindings ?? NO_BINDS;
   const effective = store.custom ?? original;
-  const onAssign = async (a: ScAction) => {
-    if (!picker) return;
-    const { next, movedFrom } = assign(effective, a.map, a.name, picker.input);
+  const assignTo = async (a: ScAction, input: string) => {
+    const { next, movedFrom } = assign(effective, a.map, a.name, input);
     await persist({ ...store, custom: next });
-    setNotice(movedFrom ? `« ${a.label} » déplacée de ${movedFrom} vers ${picker.input}.` : `« ${a.label} » liée à ${picker.input}.`);
+    setNotice(movedFrom ? `« ${a.label} » déplacée de ${movedFrom} vers ${input}.` : `« ${a.label} » liée à ${input}.`);
     setExported(null); setPicker(null);
   };
+  const onAssign = async (a: ScAction) => { if (picker) await assignTo(a, picker.input); };
   const onUnassign = async (b: ScBinding) => {
     await persist({ ...store, custom: unassign(effective, b.actionmap, b.action) });
     setNotice(`« ${actionLabel(b.action, b.actionmap)} » retirée de ${b.input}.`); setExported(null);
@@ -250,10 +252,23 @@ export function BindsPage() {
     return all.length > 1 ? `${first} +${all.length - 1}` : first;
   }, [bindingsFor, hasBinds]);
 
+  /** Domaine (déplacement, armement, cockpit…) de la première action liée à la commande. */
   const categoryFor = useCallback((c: DeviceControl): string => {
     const b = bindingsFor(c).flatMap((s) => s.bindings)[0];
-    return b ? actionmapLabel(b.actionmap) : "—";
+    return b ? domainOf(b.actionmap).label : "—";
   }, [bindingsFor]);
+  const domainFor = useCallback((c: DeviceControl) => {
+    const b = bindingsFor(c).flatMap((s) => s.bindings)[0];
+    return b ? { d: domainOf(b.actionmap), group: actionmapLabel(b.actionmap) } : null;
+  }, [bindingsFor]);
+  /** « js1_button1 » → « X-56 Stick · TRIGGER », tous appareils confondus. */
+  const inputName = useCallback((input: string): string | null => {
+    for (const d of devices) {
+      const slot = store.devices[d.id]?.jsSlot ?? 1;
+      for (const c of d.controls) for (const sub of inputsForControl(slot, c)) if (sub.input === input) return `${d.name} · ${c.name.toUpperCase()}${sub.label && sub.label !== c.name.toUpperCase() ? " " + sub.label : ""}`;
+    }
+    return null;
+  }, [devices, store.devices]);
 
   const sel = device?.controls.find((c) => c.id === selId) ?? null;
   const selIndex = device && sel ? device.controls.indexOf(sel) : -1;
@@ -261,7 +276,7 @@ export function BindsPage() {
   const cats = useMemo(() => {
     const set = new Set<string>();
     device?.controls.forEach((c) => { const k = categoryFor(c); if (k !== "—") set.add(k); });
-    return ["Tous", ...Array.from(set).sort()];
+    return ["Tous", ...DOMAINS.map((d) => d.label).filter((l) => set.has(l)), ...(set.has("Autres") ? ["Autres"] : [])];
   }, [device, categoryFor]);
   const rows = (device?.controls ?? []).map((c, i) => ({ c, i })).filter(({ c }) => cat === "Tous" || categoryFor(c) === cat);
   const totalBound = (device?.controls ?? []).filter((c) => bindingsFor(c).some((s) => s.bindings.length)).length;
@@ -515,7 +530,11 @@ export function BindsPage() {
             {!actionmaps && <div className="hint" style={{ margin: 0 }}>Sans <span className="mono">actionmaps.xml</span> chargé, tu pars d'une feuille blanche : seuls les binds que tu ajoutes ici seront exportés, les autres commandes joystick reviendront aux valeurs par défaut du jeu.</div>}
           </section>
 
-          <SectionHead n="04" title="REGISTRE DES BINDS" />
+          <SectionHead n="04" title="COMMANDES DU JEU ▸ PAR DOMAINE" />
+          <CommandCatalog bindings={effective} inputName={inputName} onAssign={assignTo} onUnassign={onUnassign}
+            target={sel && selSubs[0] ? { input: selSubs[0].input, label: `${sel.name.toUpperCase()}${selSubs.length > 1 ? " " + selSubs[0].label : ""}`, axis: isAxisInput(selSubs[0].input) } : null} />
+
+          <SectionHead n="05" title="REGISTRE DES BINDS" />
           <section className="panel" aria-label="Liste des binds" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
               <div className="label">// JS{js} — {device?.name.toUpperCase()}{!hasBinds && " — CHARGE ACTIONMAPS.XML POUR VOIR TES FONCTIONS"}</div>
@@ -525,16 +544,16 @@ export function BindsPage() {
             </div>
             <div style={{ overflowX: "auto" }}>
               <div className="table">
-                <div className="head" style={{ gridTemplateColumns: "56px 150px 200px minmax(0,1fr) 120px 90px" }}>
+                <div className="head" style={{ gridTemplateColumns: "56px 150px 200px minmax(0,1fr) 190px 90px" }}>
                   <span>N°</span><span>COMMANDE</span><span>ENTRÉE</span><span>FONCTION</span><span>CATÉGORIE</span><span>TYPE</span>
                 </div>
                 {rows.map(({ c, i }) => (
-                  <button key={c.id} type="button" className={"row" + (c.id === selId ? " active" : "")} style={{ gridTemplateColumns: "56px 150px 200px minmax(0,1fr) 120px 90px" }} onClick={() => select(c.id)}>
+                  <button key={c.id} type="button" className={"row" + (c.id === selId ? " active" : "")} style={{ gridTemplateColumns: "56px 150px 200px minmax(0,1fr) 190px 90px" }} onClick={() => select(c.id)}>
                     <span className="display" style={{ fontSize: 14, color: "var(--cyan)" }}>{i + 1}{cfg?.placements[c.id] ? "" : " ·"}</span>
                     <span className="cell-amber">{c.name.toUpperCase()}</span>
                     <span className="cell-cyan">{primaryInput(js, c)}</span>
                     <span className="cell-main">{actionFor(c)}</span>
-                    <span>{categoryFor(c)}</span>
+                    <span>{(() => { const x = domainFor(c); return x ? <span className="dom-chip" style={{ ["--dc" as string]: x.d.color }} title={x.group}><i />{x.d.label}</span> : "—"; })()}</span>
                     <span className="cell-muted">{c.kind}</span>
                   </button>
                 ))}

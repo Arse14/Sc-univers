@@ -39,15 +39,33 @@ export function findAction(name: string, map?: string): ScAction | undefined {
   return (map ? BY_KEY.get(`${map}/${name}`) : undefined) ?? BY_NAME.get(name);
 }
 
-/** Grandes familles pour filtrer le sélecteur. */
-export const FAMILIES: { id: string; label: string; test: (m: ScActionMap) => boolean }[] = [
-  { id: "flight", label: "Vol", test: (m) => /^spaceship_(movement|quantum|docking|general|view|hud|power|radar|target_hailing)$|^seat_general$|^lights_controller$|^vehicle_mfd$/.test(m.name) },
-  { id: "combat", label: "Combat", test: (m) => /^spaceship_(weapons|missiles|defensive|targeting|targeting_advanced)$|^turret_/.test(m.name) },
-  { id: "industry", label: "Minage · Recyclage · Scan", test: (m) => /^spaceship_(mining|salvage|scanning)$/.test(m.name) },
-  { id: "ground", label: "Véhicules terrestres", test: (m) => /^vehicle_(general|driver)$/.test(m.name) },
-  { id: "foot", label: "À pied · EVA", test: (m) => /^(player|prone|tractor_beam|zero_gravity_eva|zero_gravity_traversal|player_choice)$/.test(m.name) },
-  { id: "social", label: "Social", test: (m) => /^(default|ui_notification|player_emotes)$/.test(m.name) },
+/**
+ * Domaines : la démarcation affichée partout (catalogue, sélecteur, registre).
+ * Chaque groupe du jeu (actionmap) appartient à un seul domaine, avec sa couleur.
+ */
+export interface Domain { id: string; label: string; hint: string; color: string; maps: string[] }
+export const DOMAINS: Domain[] = [
+  { id: "move", label: "Déplacement", hint: "Piloter : tangage, lacet, roulis, poussée, vitesse, quantique, amarrage.", color: "#4fb3ff", maps: ["spaceship_movement", "spaceship_quantum", "spaceship_docking"] },
+  { id: "weapons", label: "Armement", hint: "Tirer : canons, groupes d'armes, cardans, missiles et torpilles.", color: "#ff6b5a", maps: ["spaceship_weapons", "spaceship_missiles"] },
+  { id: "target", label: "Ciblage", hint: "Verrouiller, changer et faire défiler les cibles.", color: "#ffb347", maps: ["spaceship_targeting", "spaceship_targeting_advanced"] },
+  { id: "defense", label: "Défense", hint: "Boucliers, leurres et contre-mesures.", color: "#b58cff", maps: ["spaceship_defensive"] },
+  { id: "cockpit", label: "Cockpit et systèmes", hint: "Allumage, puissance, écrans MFD, HUD, phares, radar, communication, sièges.", color: "#50dc8c", maps: ["spaceship_general", "seat_general", "vehicle_mfd", "spaceship_power", "spaceship_hud", "lights_controller", "spaceship_radar", "spaceship_target_hailing"] },
+  { id: "view", label: "Vue et caméra", hint: "Regarder autour de soi, zoom, vue extérieure.", color: "#62d0ff", maps: ["spaceship_view"] },
+  { id: "turret", label: "Tourelles", hint: "Commandes propres au poste de tourelle.", color: "#e8d23a", maps: ["turret_movement", "turret_advanced"] },
+  { id: "industry", label: "Minage · Recyclage · Scan", hint: "Laser de minage, rayons de recyclage, scanner.", color: "#d99a5b", maps: ["spaceship_mining", "spaceship_salvage", "spaceship_scanning"] },
+  { id: "ground", label: "Véhicules terrestres", hint: "Conduite et commandes des véhicules au sol.", color: "#9fb7c9", maps: ["vehicle_general", "vehicle_driver"] },
+  { id: "foot", label: "À pied", hint: "Se déplacer, tirer, interagir, rayon tracteur à main.", color: "#7fd6c2", maps: ["player", "prone", "tractor_beam", "player_choice"] },
+  { id: "eva", label: "EVA", hint: "Déplacement en apesanteur hors du vaisseau.", color: "#8aa4ff", maps: ["zero_gravity_eva", "zero_gravity_traversal"] },
+  { id: "social", label: "Social", hint: "Invitations, notifications et émotes.", color: "#f08fc0", maps: ["default", "ui_notification", "player_emotes"] },
 ];
+const OTHER: Domain = { id: "other", label: "Autres", hint: "", color: "#8fa3b3", maps: [] };
+const DOMAIN_OF = new Map<string, Domain>();
+for (const d of DOMAINS) for (const m of d.maps) DOMAIN_OF.set(m, d);
+/** Domaine d'un groupe du jeu (actionmap). */
+export const domainOf = (map: string): Domain => DOMAIN_OF.get(map) ?? OTHER;
+
+/** Ancien nom, gardé pour le sélecteur : mêmes entrées que les domaines. */
+export const FAMILIES: { id: string; label: string; test: (m: ScActionMap) => boolean }[] = DOMAINS.map((d) => ({ id: d.id, label: d.label, test: (m: ScActionMap) => d.maps.includes(m.name) }));
 
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
