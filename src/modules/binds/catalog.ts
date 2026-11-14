@@ -128,8 +128,9 @@ export const CATALOG: CatalogEntry[] = [
     ["h", "H3", 20], ["h", "H4", 24], ["b", "K1 Up", 28], ["b", "K1 Down", 29], ["b", "Scroll FWD", 30], ["b", "Scroll BCK", 31],
     ["a", "Rotary 1", "z"], ["a", "Rotary 2", "rotx"], ["a", "Rotary 3", "rotz"], ["a", "Rotary 4", "roty"], ["a", "Mouse X", "slider2"], ["a", "Mouse Y", "slider1"] ] },
   { key: "x65f", brand: "Saitek", name: "X-65F", kind: "hotas", sure: true, defs: [
-    ["b", "Trigger", 1], ["b", "A", 2], ["b", "B", 3], ["b", "Pinky · bouton C", 4], ["b", "Pinky · palette", 5], ["h", "H1", 9], ["h", "H2", 13], ["h", "C Stick (chapeau latéral)", 17], ["pov", "POV"],
-    ["a", "X Axis", "x"], ["a", "Y Axis", "y"], ["a", "Twist", "rotz"],
+    ["b", "Gâchette", 1], ["b", "Bouton A", 2], ["b", "Bouton B (latéral)", 3], ["b", "Bouton C", 4], ["b", "Palette auriculaire", 5],
+    ["h", "Chapeau 1 (sorcière)", 9], ["h", "Chapeau 2 (créneau)", 13], ["h", "Chapeau 3 (latéral)", 17], ["pov", "Chapeau POV"],
+    ...XY, ["a", "Torsion", "rotz"],
     ["a", "Gaz gauche", "z"], ["a", "Gaz droit", "slider1"], ["b", "Bouton D (postcombustion)", 6], ["a", "Rotatif E · axe", "rotx"], ["b", "Rotatif E · appui", 7], ["b", "Rotatif F · appui", 8],
     ["h", "Chapeau gaz haut", 21], ["h", "Chapeau gaz bas", 25], ["h", "Chapeau gaz créneau", 29], ["h", "Chapeau molette", 33, true],
     ["b", "Molette · haut", 38], ["b", "Molette · bas", 39], ["b", "Bascule K · haut", 40], ["b", "Bascule K · bas", 41], ...seq(["T1", "T2", "T3", "T4"], 42), ["b", "Bouton Danger", 46] ] },

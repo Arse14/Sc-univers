@@ -9,7 +9,7 @@
  */
 import * as THREE from "three";
 import { MAT } from "./materials";
-import { KIT, buildX55Stick, buildX55Throttle, buildX65FStick, registerModels } from "./models";
+import { KIT, buildX55Stick, buildX55Throttle, registerModels } from "./models";
 
 const { mesh, rbox, chamferBox, at, cyl, control, decal, loft, knurledKnob } = KIT;
 type G = THREE.Group;
@@ -675,56 +675,134 @@ export function buildX45(): G {
 }
 
 // ─────────────────────── SAITEK X-65F ───────────────────────
-// Manche à capteurs d'effort (même famille que le X-55 / X-56) et manette des
-// gaz double avec pupitre de modes à l'arrière.
+// D'après les planches SCJMapper. Manche à capteurs d'effort : il ne bouge pas,
+// donc ni soufflet ni ressort — un col noir brillant cerclé d'une graduation
+// jaune. Socles en pont (quatre pieds, arche sur chaque face).
+const X65 = {
+  matte: new THREE.MeshStandardMaterial({ color: 0x17191c, roughness: 0.85, metalness: 0.05 }),
+  yellow: new THREE.MeshStandardMaterial({ color: 0xe8d23a, emissive: 0x6b5f10, emissiveIntensity: 0.5, roughness: 0.7 }),
+  white: new THREE.MeshStandardMaterial({ color: 0xe9edf0, emissive: 0x9aa3ab, emissiveIntensity: 0.4, roughness: 0.6 }),
+};
+/** Socle en pont : dalle épaisse portée par quatre pieds. Renvoie la hauteur du dessus. */
+function bridgeBase(g: THREE.Object3D, w: number, d: number): number {
+  const LEG = 0.026, SLAB = 0.03;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(at(rbox(0.05, LEG, 0.05, 0.004, X65.matte), sx * (w / 2 - 0.025), LEG / 2, sz * (d / 2 - 0.025)));
+  g.add(at(rbox(w, SLAB, d, 0.006, X65.matte), 0, LEG + SLAB / 2, 0));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(at(cyl(0.004, 0.004, 0.001, MAT.gloss, 16), sx * (w / 2 - 0.02), LEG + SLAB + 0.0003, sz * (d / 2 - 0.02)));
+  return LEG + SLAB;
+}
+
+function x65Stick(): G {
+  const g = new THREE.Group();
+  const T = bridgeBase(g, 0.2, 0.2);
+  const GZ = -0.01;
+  // graduation jaune : cercle + traits radiaux
+  g.add(mesh(new THREE.TorusGeometry(0.058, 0.0005, 6, 72), X65.yellow, 0, T + 0.0004, GZ).rotateX(Math.PI / 2));
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; const t = mesh(new THREE.BoxGeometry(0.0009, 0.0005, i % 3 === 0 ? 0.014 : 0.008), X65.yellow, Math.sin(a) * 0.058, T + 0.0004, GZ + Math.cos(a) * 0.058); t.rotation.y = a; g.add(t); }
+  // col fixe noir brillant
+  g.add(at(cyl(0.04, 0.043, 0.006, MAT.gloss, 56), 0, T + 0.003, GZ));
+  g.add(at(cyl(0.03, 0.036, 0.01, MAT.gloss, 56), 0, T + 0.011, GZ));
+  g.add(at(decal("SAITEK FORCE SENSING", 0.0032, "#aab0b6"), 0, T + 0.0066, GZ + 0.034));
+  const grip = grp(g, 0, T + 0.014, GZ, -0.1);
+  grip.add(ctl("Torsion", "TORSION", 0, 0, 0, at(cyl(0.024, 0.026, 0.012, X65.matte, 40), 0, 0.006, 0)));
+  // poignée droite et massive, tête anguleuse plus large
+  grip.add(loft([
+    { y: 0.01, rx: 0.023, rz: 0.027, n: 2.6 }, { y: 0.05, rx: 0.0235, rz: 0.03, cz: 0.001, n: 2.6 }, { y: 0.1, rx: 0.024, rz: 0.031, cz: 0.002, n: 2.6 }, { y: 0.135, rx: 0.025, rz: 0.031, cz: 0.001, n: 2.8 },
+    { y: 0.152, rx: 0.036, rz: 0.035, cz: -0.004, n: 4 }, { y: 0.19, rx: 0.04, rz: 0.038, cz: -0.006, n: 5 }, { y: 0.2, rx: 0.038, rz: 0.034, cz: -0.006, n: 5 },
+  ], X65.matte, 48));
+  // repose-main trapézoïdal à droite, en bas
+  grip.add(at(chamferBox(0.05, 0.007, 0.06, 0.012, X65.matte), 0.04, 0.035, 0.012));
+  grip.add(ctl("Axes", "X / Y", 0, 0.08, 0.032, mesh(new THREE.BoxGeometry(0.014, 0.034, 0.0012), MAT.rubber)));
+  // avant : gâchette grise, bouton C argenté, palette noire sur son bloc
+  grip.add(ctl("Gâchette", "1", 0, 0.142, -0.031, trigger(0.03, 0.013, X.grey)));
+  grip.add(ctl("Bouton C", "C", -0.012, 0.1, -0.03, push(0.0065, 0.005, MAT.alu, MAT.plastic).rotateX(FRONT)));
+  grip.add(at(rbox(0.02, 0.014, 0.022, 0.003, X65.matte), 0, 0.03, -0.036));
+  grip.add(ctl("Palette auriculaire", "5", 0, 0.062, -0.04, at(rbox(0.012, 0.05, 0.005, 0.002, MAT.plastic), 0, 0, 0).rotateX(-0.2)));
+  // flanc gauche : chapeau latéral et bouton B
+  const lf = grp(grip, -0.039, 0.172, 0.0, 0, 0, LEFT);
+  lf.add(ctl("Chapeau 3 (latéral)", "H3", 0.006, 0, 0.006, hat(0.0062, MAT.plastic, "castle")));
+  lf.add(ctl("Bouton B (latéral)", "B", -0.014, 0, 0.01, push(0.005, 0.003, MAT.alu, MAT.plastic)));
+  // tête : deux pans, celui de gauche légèrement plus bas
+  const head = grp(grip, 0, 0.196, 0.016, 0.8);
+  head.add(at(rbox(0.04, 0.005, 0.066, 0.006, MAT.plastic), -0.02, -0.0015, -0.004));
+  head.add(at(rbox(0.036, 0.005, 0.066, 0.006, MAT.plastic), 0.02, 0.0005, -0.004));
+  const witch = new THREE.Group(); witch.add(at(cyl(0.011, 0.0118, 0.003, MAT.plastic, 40), 0, 0.0015, 0));
+  for (let i = 0; i < 4; i++) witch.add(at(cyl(0.0095 - i * 0.002, 0.0105 - i * 0.002, 0.002, MAT.plastic, 40), 0, 0.004 + i * 0.002, 0));
+  head.add(ctl("Chapeau 1 (sorcière)", "H1", -0.019, 0.001, -0.02, witch));
+  head.add(ctl("Bouton A", "A", -0.013, 0.001, 0.008, push(0.0058, 0.004, X.red, MAT.gloss)));
+  head.add(at(decal("A", 0.0045, "#ecd53a"), -0.03, 0.0012, 0.008));
+  const pov = new THREE.Group(); pov.add(at(cyl(0.0125, 0.013, 0.004, MAT.plastic, 48), 0, 0.002, 0)); pov.add(at(cyl(0.0108, 0.0118, 0.006, MAT.alu, 48), 0, 0.007, 0)); pov.add(at(cyl(0.0035, 0.0035, 0.001, MAT.gunmetal, 20), 0, 0.0104, 0));
+  head.add(ctl("Chapeau POV", "POV", 0.02, 0.003, -0.022, pov));
+  head.add(ctl("Chapeau 2 (créneau)", "H2", 0.02, 0.003, 0.008, hat(0.0085, MAT.plastic, "castle")));
+  return g;
+}
+
+function x65Throttle(): G {
+  const g = new THREE.Group();
+  const T = bridgeBase(g, 0.2, 0.22);
+  // console centrale inclinée, deux fentes à échelle blanche
+  const deck = grp(g, -0.02, T, 0.0, 0.16);
+  deck.add(at(rbox(0.1, 0.012, 0.12, 0.004, X65.matte), 0, 0.006, 0));
+  for (const sx of [-1, 1]) {
+    deck.add(mesh(new THREE.BoxGeometry(0.03, 0.001, 0.08), MAT.gloss, sx * 0.021, 0.0125, 0.004));
+    for (let i = 0; i < 9; i++) deck.add(mesh(new THREE.BoxGeometry(i % 4 === 0 ? 0.022 : 0.016, 0.0006, 0.0012), X65.white, sx * 0.021, 0.0132, 0.012 + i * 0.0034));
+  }
+  // galet en deux moitiés (couture au milieu), axe gauche-droite
+  const half = (r: number, len: number) => { const m = mesh(new THREE.CylinderGeometry(r, r, len, 48), X65.matte); m.rotation.z = Math.PI / 2; m.scale.set(1, 1, 1.25); return m; };
+  const arm = (x: number) => { const a = grp(deck, x, 0.012, 0.004, -0.5); a.add(at(rbox(0.016, 0.05, 0.03, 0.003, MAT.plastic), 0, 0.025, 0)); return a; };
+  const aL = arm(-0.021), aR = arm(0.021);
+  const hL = grp(aL, -0.006, 0.078, 0), hR = grp(aR, 0.006, 0.078, 0);
+  hL.add(ctl("Gaz gauche", "GAZ G", 0, 0, 0, half(0.036, 0.05)));
+  hL.add(at(half(0.031, 0.004), -0.027, 0, 0));
+  hR.add(ctl("Gaz droit", "GAZ D", 0, 0, 0, half(0.036, 0.05)));
+  // moitié gauche : bouton D sur le flanc, bascule K et molette argentée côté doigts
+  hL.add(ctl("Bouton D (postcombustion)", "D", -0.03, -0.02, 0.012, rbox(0.004, 0.014, 0.018, 0.0015, X.grey)));
+  const lfF = grp(hL, 0, 0, -0.045, FRONT);
+  lfF.add(ctl("Bascule K", "K", 0.004, 0, 0.0, at(cyl(0.0085, 0.009, 0.002, MAT.plastic, 28), 0, 0.001, 0), at(rbox(0.011, 0.005, 0.007, 0.002, MAT.plastic), 0, 0.0045, 0)));
+  hL.add(ctl("Molette", "MOLETTE", -0.033, 0.002, -0.018, knurledKnob(0.011, 0.008, MAT.alu).rotateZ(Math.PI / 2)));
+  // moitié droite, prolongée par le bloc des rotatifs
+  const blk = grp(hR, 0.04, 0.0, -0.004);
+  blk.add(at(rbox(0.034, 0.05, 0.05, 0.01, X65.matte), 0, 0, 0));
+  const knobE = new THREE.Group(); knobE.add(at(cyl(0.017, 0.018, 0.006, MAT.plastic, 48), 0, 0.003, 0)); knobE.add(at(knurledKnob(0.0155, 0.01, MAT.plastic), 0, 0.011, 0)); knobE.add(at(cyl(0.011, 0.011, 0.001, MAT.gloss, 32), 0, 0.0165, 0));
+  blk.add(ctl("Rotatif E", "E", 0.002, 0.025, 0.0, knobE));
+  const knobF = new THREE.Group(); knobF.add(at(knurledKnob(0.013, 0.009, MAT.plastic), 0, 0.0045, 0));
+  blk.add(ctl("Rotatif F", "F", 0.002, -0.025, -0.006, knobF.rotateX(Math.PI)));
+  // deux petits chapeaux argentés sous le bloc, vers le pilote
+  const th = grp(blk, 0.004, -0.012, 0.0255, BACK);
+  th.add(ctl("Chapeau gaz haut", "H4", -0.006, 0, -0.008, at(cyl(0.004, 0.0045, 0.008, MAT.alu, 20), 0, 0.004, 0), at(knurledKnob(0.005, 0.004, MAT.knurl), 0, 0.01, 0)));
+  th.add(ctl("Chapeau gaz bas", "H5", 0.008, 0, 0.006, at(cyl(0.004, 0.0045, 0.008, MAT.alu, 20), 0, 0.004, 0), at(knurledKnob(0.005, 0.004, MAT.knurl), 0, 0.01, 0)));
+  // côté doigts de la moitié droite : chapeau créneau noir et chapeau-molette argenté
+  const rtF = grp(hR, 0, 0, -0.045, FRONT);
+  rtF.add(ctl("Chapeau gaz créneau", "H6", -0.012, 0, 0.0, hat(0.007, MAT.plastic, "castle")));
+  const wheelHat = new THREE.Group(); wheelHat.add(at(cyl(0.0095, 0.0095, 0.003, MAT.alu, 40), 0, 0.0015, 0)); wheelHat.add(at(cyl(0.0045, 0.0045, 0.002, MAT.gunmetal, 24), 0, 0.004, 0));
+  rtF.add(ctl("Chapeau molette", "H7", 0.012, 0, 0.0, wheelHat));
+  g.add(at(decal("X65F", 0.008, "#e9edf0"), 0.06, T + 0.0006, 0.085));
+  // pupitre arrière : deux boîtiers côte à côte sur potence
+  g.add(at(rbox(0.016, 0.11, 0.016, 0.003, X65.matte), 0.045, T + 0.055, -0.092));
+  const panel = grp(g, 0.035, T + 0.13, -0.085, 1.25);
+  panel.add(at(rbox(0.078, 0.035, 0.07, 0.003, X65.matte), -0.04, -0.0175, 0));
+  panel.add(at(rbox(0.078, 0.035, 0.07, 0.003, X65.matte), 0.041, -0.0175, 0));
+  for (const x of [-0.074, -0.006, 0.007, 0.075]) for (const z of [-0.03, 0.03]) panel.add(at(cyl(0.0028, 0.0028, 0.0015, MAT.alu, 12), x, 0.0006, z));
+  // boîtier gauche : SAFE rouge, rangée MODE orange, F1 / F2, T1–T4
+  panel.add(ctl("Bouton Danger", "SAFE", -0.07, 0.0005, -0.016, at(rbox(0.012, 0.008, 0.016, 0.002, X.red), 0, 0.004, 0)));
+  panel.add(at(decal("MODE", 0.003, "#e9edf0"), -0.034, 0.0006, -0.027));
+  for (let i = 0; i < 4; i++) panel.add(at(key(0.0095, 0.008, X.orangeLit), -0.052 + i * 0.012, 0.0005, -0.018));
+  for (let i = 0; i < 2; i++) panel.add(at(key(0.012, 0.007, X.grey), -0.064 + i * 0.015, 0.0005, 0.0));
+  ["T1", "T2", "T3", "T4"].forEach((n, i) => panel.add(ctl(n, n, -0.028 + (i % 2) * 0.017, 0.0005, 0.002 + Math.floor(i / 2) * 0.016, key(0.013, 0.009, MAT.plastic))));
+  // boîtier droit : tableau des réglages d'effort
+  panel.add(at(rbox(0.066, 0.0008, 0.058, 0.002, MAT.gloss), 0.041, 0.0006, 0));
+  panel.add(at(decal("X65F", 0.006, "#e9edf0"), 0.026, 0.0012, -0.022));
+  panel.add(at(decal("FORCE SETTING", 0.0026, "#e9edf0"), 0.056, 0.0012, -0.022));
+  for (let i = 0; i < 5; i++) panel.add(mesh(new THREE.BoxGeometry(0.058, 0.0004, 0.0006), X65.white, 0.041, 0.0012, -0.014 + i * 0.009));
+  for (const x of [0.012, 0.03, 0.05, 0.07]) panel.add(mesh(new THREE.BoxGeometry(0.0006, 0.0004, 0.036), X65.white, x, 0.0012, 0.004));
+  ["F1", "F2", "F3", "F4"].forEach((n, i) => panel.add(at(decal(n, 0.0034, "#e9edf0"), 0.021, 0.0013, -0.0095 + i * 0.009)));
+  return g;
+}
+
 export function buildX65F(): G {
   const root = new THREE.Group(); root.name = "X-65F";
-  const stick = buildX65FStick(); stick.position.x = 0.14; root.add(stick);
-  const yellow = new THREE.MeshStandardMaterial({ color: 0xe8d23a, emissive: 0x6b5f10, emissiveIntensity: 0.5, roughness: 0.7 });
-  const t = grp(root, -0.14, 0, 0);
-  // socle en coin : deux patins, plateau incliné vers le pilote, deux fentes graduées
-  for (const sx of [-1, 1]) t.add(at(rbox(0.03, 0.03, 0.22, 0.006, MAT.body), sx * 0.075, 0.015, 0));
-  const deck = grp(t, 0, 0.03, 0, 0.1);
-  deck.add(at(rbox(0.19, 0.03, 0.2, 0.008, MAT.body), 0, 0.015, 0));
-  const D = 0.031;
-  for (const sx of [-1, 1]) {
-    deck.add(mesh(new THREE.BoxGeometry(0.022, 0.001, 0.09), MAT.gloss, -0.03 + sx * 0.02, D, 0.01));
-    for (let i = 0; i < 7; i++) deck.add(mesh(new THREE.BoxGeometry(0.014, 0.0006, 0.0012), MAT.print, -0.03 + sx * 0.02, D + 0.0006, -0.02 + i * 0.01));
-  }
-  deck.add(at(decal("X65F", 0.009, "#ecd53a"), 0.05, D + 0.0006, 0.07));
-  // pupitre arrière sur potence : touches de mode orange, T1–T4, bouton rouge
-  t.add(at(rbox(0.014, 0.1, 0.014, 0.003, MAT.plastic), 0.05, 0.08, -0.105));
-  const panel = grp(t, 0.05, 0.15, -0.1, 1.15);
-  panel.add(at(rbox(0.13, 0.03, 0.075, 0.004, MAT.body), 0, -0.015, 0));
-  panel.add(at(rbox(0.058, 0.001, 0.066, 0.002, MAT.gloss), 0.033, 0.0006, 0));
-  for (let i = 0; i < 4; i++) panel.add(mesh(new THREE.BoxGeometry(0.05, 0.0004, 0.001), MAT.print, 0.033, 0.0012, -0.02 + i * 0.013));
-  for (let i = 0; i < 4; i++) panel.add(at(key(0.009, 0.007, X.orangeLit), -0.046 + i * 0.011, 0.0005, -0.022));
-  ["T1", "T2", "T3", "T4"].forEach((n, i) => panel.add(ctl(n, n, -0.04 + (i % 2) * 0.022, 0.0005, -0.004 + Math.floor(i / 2) * 0.016, key(0.016, 0.011, MAT.plastic))));
-  panel.add(ctl("Bouton Danger", "SAFE", -0.056, 0.0005, -0.022, key(0.01, 0.009, X.red)));
-  // leviers : deux galets jumelés, le droit plus large, graduations jaunes
-  const arm = (x: number) => { const g = grp(deck, x, D, 0.01, -0.35); g.add(at(rbox(0.014, 0.05, 0.03, 0.003, MAT.plastic), 0, 0.025, 0)); return g; };
-  const aL = arm(-0.05), aR = arm(-0.01);
-  const podL = mesh(new THREE.SphereGeometry(1, 40, 24), MAT.body); podL.scale.set(0.021, 0.036, 0.05);
-  const podR = mesh(new THREE.SphereGeometry(1, 40, 24), MAT.body); podR.scale.set(0.026, 0.04, 0.054);
-  aL.add(ctl("Gaz gauche", "GAZ G", -0.002, 0.075, 0, podL));
-  aR.add(ctl("Gaz droit", "GAZ D", 0.008, 0.078, 0, podR));
-  aR.add(mesh(new THREE.BoxGeometry(0.001, 0.05, 0.002), yellow, -0.012, 0.08, 0.03));
-  // bloc de commandes prolongeant le levier droit (côté pouce)
-  const blk = grp(aR, 0.046, 0.082, -0.004);
-  blk.add(at(rbox(0.05, 0.04, 0.05, 0.008, MAT.plastic), 0, 0, 0));
-  blk.add(ctl("Rotatif E", "E", 0.006, 0.02, -0.012, knurledKnob(0.012, 0.012, MAT.plastic)));
-  blk.add(ctl("Rotatif F", "F", -0.012, -0.02, -0.014, knurledKnob(0.009, 0.008, MAT.plastic).rotateX(Math.PI)));
-  const bk = grp(blk, 0, 0, 0.0255, BACK);                       // face tournée vers le pilote
-  bk.add(ctl("Chapeau gaz haut", "H4", -0.014, 0, -0.006, hat(0.0058, MAT.plastic, "castle")));
-  bk.add(ctl("Chapeau gaz bas", "H5", 0.006, 0, -0.004, hat(0.0062, MAT.alu, "dome")));
-  bk.add(ctl("Bascule K", "K", 0.018, 0, 0.01, rbox(0.012, 0.005, 0.007, 0.002, MAT.plastic)));
-  const rt = grp(blk, 0.0255, 0, 0, 0, 0, RIGHT);                // bout droit
-  rt.add(ctl("Molette", "MOLETTE", 0, 0, 0.004, knurledKnob(0.008, 0.008, MAT.alu)));
-  const fr = grp(blk, 0, 0, -0.0255, FRONT);                     // côté doigts
-  fr.add(ctl("Chapeau gaz créneau", "H6", 0.01, 0, 0.004, hat(0.0058, MAT.plastic, "castle")));
-  fr.add(ctl("Chapeau molette", "H7", -0.01, 0, -0.002, ministick(0.0055)));
-  const lf = grp(aL, -0.022, 0.07, 0.01, 0, 0, LEFT);
-  lf.add(ctl("Bouton D (postcombustion)", "D", 0, 0, 0, key(0.012, 0.016, X.grey)));
+  const s = x65Stick(); s.position.x = 0.13; root.add(s);
+  const t = x65Throttle(); t.position.x = -0.13; root.add(t);
   return root;
 }
 
