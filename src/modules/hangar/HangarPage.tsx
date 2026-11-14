@@ -53,9 +53,10 @@ export function HangarPage() {
   const sheetRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
+  const [catError, setCatError] = useState<string | null>(null);
   const refreshCatalog = (force: boolean) => {
     setLoadingCat(true); setProgress(0);
-    loadCatalog(force, setProgress).then((r) => { setCatalog(r.ships); setCatSource(r.source); }).finally(() => setLoadingCat(false));
+    loadCatalog(force, setProgress).then((r) => { setCatalog(r.ships); setCatSource(r.source); setCatError(r.error ?? null); }).finally(() => setLoadingCat(false));
   };
   useEffect(() => {
     loadHangar().then(setHangar).catch(() => undefined);
@@ -361,7 +362,14 @@ export function HangarPage() {
         <button type="button" className={"tab" + (onlyGame ? " active" : "")} aria-pressed={onlyGame} onClick={() => setOnlyGame((v) => !v)}>Uniquement en jeu</button>
       </div>
       {catalog.length === 0 ? (
-        <div className="panel empty">{loadingCat ? `Chargement du catalogue… ${progress ? `${progress} modèles reçus` : ""}` : "Catalogue indisponible."}</div>
+        <div className="panel empty">
+          {loadingCat ? `Chargement du catalogue… ${progress ? `${progress} modèles reçus` : ""}` : (
+            <>
+              <div>Catalogue indisponible : FleetYards n'a pas répondu comme attendu{catError ? ` (${catError})` : ""}.</div>
+              <button type="button" className="btn sm" style={{ marginTop: 12 }} onClick={() => refreshCatalog(true)}>Réessayer</button>
+            </>
+          )}
+        </div>
       ) : (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12 }}>

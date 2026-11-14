@@ -61,6 +61,16 @@ async function getJson<T>(url: string): Promise<T> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
+/**
+ * FleetYards a changé l'enveloppe de ses listes : autrefois un tableau nu,
+ * désormais { items: [...], meta: { pagination } }. On accepte les deux.
+ */
+function listOf(data: Any): { items: Any[]; pages: number | null } {
+  if (Array.isArray(data)) return { items: data, pages: null };
+  const items = Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : [];
+  const pages = typeof data?.meta?.pagination?.totalPages === "number" ? data.meta.pagination.totalPages : null;
+  return { items, pages };
+}
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 /** « Teasa Spaceport, Lorville » à partir de la boutique FleetYards. */
@@ -115,27 +125,27 @@ function compact(m: Any): Ship {
 interface Cache { at: number; ships: Ship[] }
 
 /** Catalogue condensé. `onProgress` reçoit le nombre de modèles déjà reçus. */
-export async function loadCatalog(force = false, onProgress?: (n: number) => void): Promise<{ ships: Ship[]; source: "api" | "cache" | "none"; at: number | null }> {
+export async function loadCatalog(force = false, onProgress?: (n: number) => void): Promise<{ ships: Ship[]; source: "api" | "cache" | "none"; at: number | null; error?: string }> {
   const c = await loadStore<Cache>(CATALOG_KEY).catch(() => null);
   if (!force && c && Date.now() - c.at < TTL && c.ships.length > 50) return { ships: c.ships, source: "cache", at: c.at };
   try {
     const ships: Ship[] = [];
     // Petites pages : chaque modèle pèse ≈ 100 Ko en JSON brut, on ne veut pas 20 Mo en mémoire d'un coup.
     for (let page = 1; page <= 30; page++) {
-      const data = await getJson<Any[]>(`${API}/models?perPage=${PAGE}&page=${page}`);
-      if (!Array.isArray(data) || data.length === 0) break;
-      for (const m of data) ships.push(compact(m));
+      const { items, pages } = listOf(await getJson<Any>(`${API}/models?perPage=${PAGE}&page=${page}`));
+      if (items.length === 0) break;
+      for (const m of items) ships.push(compact(m));
       onProgress?.(ships.length);
-      if (data.length < PAGE) break;
+      if (pages != null ? page >= pages : items.length < PAGE) break;
     }
     if (ships.length < 50) throw new Error("catalogue incomplet");
     ships.sort((a, b) => a.mfr.localeCompare(b.mfr) || a.name.localeCompare(b.name));
     const at = Date.now();
     await saveStore<Cache>(CATALOG_KEY, { at, ships }).catch(() => undefined);
     return { ships, source: "api", at };
-  } catch {
+  } catch (e) {
     if (c) return { ships: c.ships, source: "cache", at: c.at };
-    return { ships: [], source: "none", at: null };
+    return { ships: [], source: "none", at: null, error: e instanceof Error ? e.message : String(e) };
   }
 }
 
@@ -286,7 +296,7 @@ export async function loadShipFittings(slug: string): Promise<ShipFittings | nul
   const c = await loadStore<ShipFittings>(key).catch(() => null);
   if (c && Date.now() - c.at < TTL) { remember(fitMem, slug, c, 3); return c; }
   try {
-    const raw = await getJson<Any[]>(`${API}/models/${encodeURIComponent(slug)}/hardpoints`);
+    const raw = listOf(await getJson<Any>(`${API}/models/${encodeURIComponent(slug)}/hardpoints`)).items;
     const items = merge((Array.isArray(raw) ? raw : []).filter((h) => GROUP_ORDER.includes(String(h?.group))).map(fitting))
       .sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group) || (b.size ?? 0) - (a.size ?? 0) || a.slot.localeCompare(b.slot));
     const f: ShipFittings = { slug, at: Date.now(), items };
