@@ -118,6 +118,49 @@ export const CATALOG: CatalogEntry[] = [
     ["b", "Gâchette", 1], ["b", "Bouton A", 2], ["b", "Bouton B", 3], ["b", "Bouton X", 4], ["b", "Bouton Y", 5], ["pov", "Chapeau"], ["b", "Mini-stick · appui", 6], ["b", "Gâchette rapide", 7],
     ...seq(["Socle G1", "Socle G2", "Socle G3", "Socle G4", "Socle D1", "Socle D2", "Socle D3", "Socle D4"], 8), ["b", "Molette · gauche", 16], ["b", "Molette · droite", 17],
     ...XY, ["a", "Torsion", "rotz"], ["a", "Mini-stick · X", "rotx"], ["a", "Mini-stick · Y", "roty"], ["a", "Levier G", "z"], ["a", "Levier D", "slider1"] ] },
+  { key: "x55-stick", brand: "Saitek", name: "X-55 Rhino (manche)", kind: "stick", sure: true, defs: [
+    ["b", "Trigger", 1], ["b", "A", 2], ["b", "B", 3], ["b", "D", 4], ["b", "Pinky · bouton", 5], ["b", "Pinky · palette", 6], ["h", "H1", 7], ["h", "H2", 11], ["pov", "POV"],
+    ["a", "X Axis", "x"], ["a", "Y Axis", "y"], ["a", "Twist", "rotz"] ] },
+  { key: "x55-throttle", brand: "Saitek", name: "X-55 Rhino (gaz)", kind: "throttle", sure: true, defs: [
+    ["a", "Left Throttle", "x"], ["b", "E", 1], ["b", "F Push", 2], ["b", "G Push", 3], ["b", "H", 4], ["b", "I", 5],
+    ...seq(["SW 1", "SW 2", "SW 3", "SW 4", "SW 5", "SW 6"], 6),
+    ...seq(["TGL 1 Up", "TGL 1 Down", "TGL 2 Up", "TGL 2 Down", "TGL 3 Up", "TGL 3 Down", "TGL 4 Up", "TGL 4 Down"], 12),
+    ["h", "H3", 20], ["h", "H4", 24], ["b", "K1 Up", 28], ["b", "K1 Down", 29], ["b", "Scroll FWD", 30], ["b", "Scroll BCK", 31],
+    ["a", "Rotary 1", "z"], ["a", "Rotary 2", "rotx"], ["a", "Rotary 3", "rotz"], ["a", "Rotary 4", "roty"], ["a", "Mouse X", "slider2"], ["a", "Mouse Y", "slider1"] ] },
+  { key: "x65f", brand: "Saitek", name: "X-65F", kind: "hotas", sure: true, defs: [
+    ["b", "Trigger", 1], ["b", "A", 2], ["b", "B", 3], ["b", "Pinky · bouton C", 4], ["b", "Pinky · palette", 5], ["h", "H1", 9], ["h", "H2", 13], ["h", "C Stick (chapeau latéral)", 17], ["pov", "POV"],
+    ["a", "X Axis", "x"], ["a", "Y Axis", "y"], ["a", "Twist", "rotz"],
+    ["a", "Gaz gauche", "z"], ["a", "Gaz droit", "slider1"], ["b", "Bouton D (postcombustion)", 6], ["a", "Rotatif E · axe", "rotx"], ["b", "Rotatif E · appui", 7], ["b", "Rotatif F · appui", 8],
+    ["h", "Chapeau gaz haut", 21], ["h", "Chapeau gaz bas", 25], ["h", "Chapeau gaz créneau", 29], ["h", "Chapeau molette", 33, true],
+    ["b", "Molette · haut", 38], ["b", "Molette · bas", 39], ["b", "Bascule K · haut", 40], ["b", "Bascule K · bas", 41], ...seq(["T1", "T2", "T3", "T4"], 42), ["b", "Bouton Danger", 46] ] },
+  { key: "x45", brand: "Saitek", name: "X-45", kind: "hotas", sure: true, defs: [
+    ["b", "Gâchette", 1], ["b", "Bouton A", 2], ["b", "Bouton B", 3], ["b", "Launch (capot)", 4], ["b", "Bouton C", 8], ["b", "Palette auriculaire", 7], ["pov", "Chapeau 1"], ["h", "Chapeau 2", 15],
+    ["b", "T1 · haut", 9], ["b", "T1 · bas", 10], ["b", "T2 · haut", 11], ["b", "T2 · bas", 12], ["b", "T3 · haut", 13], ["b", "T3 · bas", 14],
+    ["b", "Bouton D", 5], ["b", "Bouton souris", 6], ["h", "Chapeau gaz", 19], ["h", "Chapeau souris", 23],
+    ...XY, ["a", "Gaz", "slider1"], ["a", "Palonnier (bascule)", "rotz"], ["a", "Rotatif haut", "roty"], ["a", "Rotatif bas", "rotx"] ] },
+  { key: "fly5", brand: "Saitek", name: "Cyborg F.L.Y. 5", kind: "stick", sure: true, defs: [
+    ["b", "Gâchette", 1], ["b", "Tête 2", 2], ["b", "Tête 3", 3], ["b", "Tête 4", 4], ["b", "Tête 5", 5], ["pov", "Chapeau"],
+    ...seq(["Socle 6", "Socle 7", "Socle 8", "Socle 9", "Arrière G", "Arrière D"], 6), ["b", "Molette · haut", 12], ["b", "Molette · bas", 13], ["b", "Bouton du socle", 14],
+    ...XY, ["a", "Torsion", "rotz"], ["a", "Levier de gaz", "z"] ] },
+  { key: "g940", brand: "Logitech", name: "G940 (manche)", kind: "stick", sure: true, defs: [
+    ["b", "Gâchette · cran 1", 1], ["b", "Gâchette · cran 2", 9], ["b", "Fire", 2], ...seq(["S1", "S2", "S3", "S4", "S5"], 3), ["pov", "Chapeau"], ["b", "Mini-stick · appui", 8],
+    ["a", "Mini-stick · X", "slider2"], ["a", "Mini-stick · Y", "slider1"], ...XY, ["a", "Trim 1", "rotz"], ["a", "Trim 2", "rotx"], ["a", "Trim 3", "roty"] ] },
+  { key: "cobra-m5", brand: "Defender", name: "Cobra M5", kind: "stick", sure: true, defs: [
+    ["b", "Gâchette", 1], ["b", "Gâchette secondaire", 2], ["b", "Bouton rouge G", 3], ["b", "Bouton rouge D", 4], ["h4", "Chapeau", [6, 7, 8, 5]], ["b", "Palette auriculaire", 9], ["pov", "Chapeau POV"],
+    ...XY, ["a", "Torsion", "rotz"] ] },
+  { key: "virpil-delta", brand: "Virpil", name: "WarBRD Delta", kind: "stick", sure: true, defs: [
+    ["b", "Gâchette · cran 1", 1], ["b", "Gâchette · cran 2", 2], ["b", "Bouton de gâchette", 3], ["b", "Molette · haut", 4], ["b", "Molette · bas", 5], ["b", "Molette · appui", 6],
+    ["b", "Mini-stick · appui", 7], ["h", "Chapeau droit", 8, true], ["h", "Chapeau gauche", 13, true], ["h", "Chapeau lumineux", 18, true],
+    ...XY, ["a", "Torsion", "z"], ["a", "Mini-stick · X", "rotx"], ["a", "Mini-stick · Y", "roty"] ] },
+  { key: "virpil-warbrd", brand: "Virpil", name: "WarBRD (poignée)", kind: "stick", sure: false, defs: [
+    ["b", "Gâchette · cran 1", 1], ["b", "Gâchette · cran 2", 2], ["b", "Bouton rouge", 3], ["b", "Bouton auriculaire", 4], ["b", "Bouton vert", 19],
+    ["h", "Chapeau haut", 5, true], ["h", "Chapeau pouce", 14, true], ...XY, ["a", "Torsion", "rotz"] ] },
+  { key: "virpil-t50", brand: "Virpil", name: "MongoosT-50CM2 (poignée)", kind: "stick", sure: false, defs: [
+    ["b", "Gâchette · cran 1", 1], ["b", "Gâchette · cran 2", 2], ["b", "Gâchette rabattable", 3], ["b", "Bouton rouge", 4], ["b", "Bouton noir", 5], ["b", "Bouton auriculaire", 6],
+    ["pov", "Chapeau trim"], ["h", "Chapeau 2", 9, true], ["h", "Chapeau 3", 15, true], ["h", "Chapeau pouce", 25, true], ["a", "Levier de frein", "z"], ["b", "Levier de frein · butée", 31], ...XY ] },
+  { key: "orion-f16", brand: "WinWing", name: "Orion 2 + poignée F-16", kind: "stick", sure: false, defs: [
+    ["b", "Gâchette · cran 1", 1], ["b", "Gâchette · cran 2", 2], ["b", "Bouton rouge", 20], ["b", "Bouton auriculaire", 3], ["b", "Palette", 4],
+    ["pov", "Trim"], ["b", "Trim · appui", 19], ["h4", "Chapeau droit (DMS)", [15, 16, 17, 18], 14], ["h4", "Chapeau gauche (TMS)", [32, 33, 34, 35], 31], ["h4", "Chapeau pouce (CMS)", [37, 38, 39, 40], 36], ...XY ] },
 ];
 
 export const CAT_PREFIX = "cat:";

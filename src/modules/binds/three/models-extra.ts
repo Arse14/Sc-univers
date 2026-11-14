@@ -9,7 +9,7 @@
  */
 import * as THREE from "three";
 import { MAT } from "./materials";
-import { KIT, registerModels } from "./models";
+import { KIT, buildStick, buildThrottle, registerModels } from "./models";
 
 const { mesh, rbox, chamferBox, at, cyl, control, decal, loft, knurledKnob } = KIT;
 type G = THREE.Group;
@@ -633,6 +633,251 @@ export function buildVelocityOne(): G {
   return root;
 }
 
+// ─────────────────────── SAITEK X-45 ───────────────────────
+// Socles bleus sérigraphiés. Manche : poignée noire à arceau, boutons orange,
+// capot de lancement. Gaz : aile grise à deux rotatifs, bouton D orange.
+export function buildX45(): G {
+  const root = new THREE.Group(); root.name = "X-45";
+  const blue = new THREE.MeshStandardMaterial({ color: 0x2444a8, roughness: 0.45, metalness: 0.3 });
+  const H = 0.045, sx = 0.12, tx = -0.12;
+  for (const x of [sx, tx]) { root.add(at(rbox(0.19, H - 0.012, 0.2, 0.012, MAT.body), x, (H - 0.012) / 2, 0)); root.add(at(rbox(0.186, 0.012, 0.196, 0.012, blue), x, H - 0.006, 0)); }
+  root.add(at(cyl(0.04, 0.042, 0.004, MAT.alu, 48), sx, H + 0.002, -0.01));
+  root.add(at(boot(0.03, 0.02), sx, H + 0.004, -0.01));
+  ["T1", "T2", "T3"].forEach((n, i) => root.add(ctl(n, n, sx - 0.022 + i * 0.022, H + 0.001, 0.076, toggle(0.01, 0))));
+  const grip = grp(root, sx, H + 0.026, -0.01, -0.14);
+  grip.add(fighterGrip(1.05, MAT.body));
+  grip.add(at(rbox(0.006, 0.09, 0.008, 0.002, MAT.body), 0, 0.085, -0.05));          // arceau avant
+  axesPad(grip, 0.085, 0.032);
+  grip.add(ctl("Gâchette", "1", 0, 0.155, -0.035, trigger(0.032, 0.012, MAT.plastic)));
+  grip.add(ctl("Palette auriculaire", "7", 0, 0.085, -0.032, at(rbox(0.01, 0.034, 0.005, 0.002, X.orange), 0, 0, -0.004)));
+  grip.add(ctl("Bouton C", "C", -0.03, 0.15, 0.004, push(0.0052, 0.003, X.orange).rotateZ(LEFT)));
+  const head = grp(grip, 0, 0.188, 0.02, 0.85);
+  head.add(at(rbox(0.066, 0.004, 0.058, 0.012, MAT.plastic), 0, -0.001, -0.006));
+  head.add(ctl("Launch (capot)", "LAUNCH", 0.0, 0.001, -0.022, at(rbox(0.014, 0.008, 0.02, 0.003, MAT.alu), 0, 0.004, 0)));
+  head.add(ctl("Bouton A", "A", 0.021, 0.001, -0.02, push(0.005, 0.003, X.orange)));
+  head.add(ctl("Bouton B", "B", -0.021, 0.001, -0.02, push(0.005, 0.003, X.orange)));
+  head.add(ctl("Chapeau 1", "POV", 0.014, 0.001, 0.006, hat(0.0072, MAT.alu, "dome")));
+  head.add(ctl("Chapeau 2", "H2", -0.014, 0.001, 0.006, hat(0.0066, MAT.plastic, "castle")));
+  const arm = grp(root, tx - 0.02, H, -0.02, -0.25);
+  arm.add(at(rbox(0.03, 0.07, 0.03, 0.006, MAT.plastic), 0, 0.035, 0));
+  arm.add(ctl("Gaz", "GAZ", 0.025, 0.088, 0, rbox(0.14, 0.042, 0.052, 0.018, X.grey)));
+  const wr = grp(arm, 0.097, 0.088, 0, 0, 0, RIGHT);
+  wr.add(ctl("Rotatif haut", "ROT 1", -0.01, 0, -0.012, knurledKnob(0.009, 0.008, MAT.knurl)));
+  wr.add(ctl("Rotatif bas", "ROT 2", 0.012, 0, 0.012, knurledKnob(0.009, 0.008, MAT.knurl)));
+  const wb = grp(arm, 0.05, 0.088, 0.028, BACK);
+  wb.add(ctl("Bouton D", "D", 0.03, 0, 0, push(0.0058, 0.003, X.orange)));
+  wb.add(ctl("Chapeau gaz", "H3", 0.008, 0, -0.004, hat(0.006, MAT.plastic, "cross")));
+  wb.add(ctl("Chapeau souris", "H4", -0.014, 0, 0.0, hat(0.006, MAT.plastic, "dome")));
+  wb.add(ctl("Bouton souris", "6", -0.034, 0, 0.0, push(0.0045, 0.003, MAT.alu)));
+  const wf = grp(arm, 0.0, 0.088, -0.028, FRONT);
+  wf.add(ctl("Palonnier (bascule)", "BASCULE", 0, 0, 0, rbox(0.05, 0.008, 0.01, 0.003, MAT.plastic)));
+  return root;
+}
+
+// ─────────────────────── SAITEK X-65F ───────────────────────
+// Manche à capteurs d'effort (même famille que le X-55 / X-56) et manette des
+// gaz double avec pupitre de modes à l'arrière.
+export function buildX65F(): G {
+  const root = new THREE.Group(); root.name = "X-65F";
+  const stick = buildStick(); stick.position.x = 0.14; root.add(stick);
+  const t = grp(root, -0.14, 0, 0);
+  const H = 0.04;
+  t.add(at(rbox(0.2, H, 0.24, 0.01, MAT.body), 0, H / 2, 0));
+  t.add(at(rbox(0.09, 0.05, 0.03, 0.004, MAT.plastic), 0.03, H + 0.025, 0.1));    // pupitre arrière
+  ["T1", "T2", "T3", "T4"].forEach((n, i) => t.add(ctl(n, n, 0.0 + i * 0.02, H + 0.052, 0.1, key(0.014, 0.012, X.orangeLit))));
+  t.add(ctl("Bouton Danger", "46", -0.03, H + 0.052, 0.1, push(0.006, 0.004, X.red)));
+  const arm = (x: number) => { const g = grp(t, x, H, -0.02, -0.3); g.add(at(rbox(0.012, 0.07, 0.022, 0.003, X.steel), 0, 0.035, 0)); return g; };
+  const aL = arm(-0.05), aR = arm(-0.008);
+  aL.add(ctl("Gaz gauche", "GAZ G", -0.004, 0.1, 0, rbox(0.038, 0.07, 0.06, 0.014, MAT.body)));
+  aR.add(ctl("Gaz droit", "GAZ D", 0.008, 0.104, 0, rbox(0.044, 0.078, 0.064, 0.014, MAT.body)));
+  const rt = grp(aR, 0.031, 0.108, 0, 0, 0, RIGHT);
+  rt.add(ctl("Chapeau gaz haut", "H4", -0.022, 0, 0.008, hat(0.006, MAT.plastic, "dome")));
+  rt.add(ctl("Chapeau gaz bas", "H5", 0.0, 0, 0.012, hat(0.006, MAT.plastic, "cross")));
+  rt.add(ctl("Chapeau gaz créneau", "H6", 0.02, 0, 0.004, hat(0.006, MAT.plastic, "castle")));
+  rt.add(ctl("Rotatif E", "E", -0.016, 0, -0.016, knurledKnob(0.007, 0.007, MAT.knurl)));
+  rt.add(ctl("Rotatif F", "F", 0.008, 0, -0.016, knurledKnob(0.007, 0.007, MAT.knurl)));
+  const rf = grp(aR, 0.008, 0.112, -0.033, FRONT);
+  rf.add(ctl("Chapeau molette", "H7", 0, 0, 0.014, ministick(0.006)));
+  rf.add(ctl("Molette", "MOLETTE", 0.012, 0, -0.008, knurledKnob(0.006, 0.006, MAT.knurl).rotateZ(Math.PI / 2)));
+  rf.add(ctl("Bascule K", "K", -0.01, 0, -0.01, rbox(0.008, 0.006, 0.016, 0.002, X.steel)));
+  const lf = grp(aL, -0.024, 0.1, 0, 0, 0, LEFT);
+  lf.add(ctl("Bouton D (postcombustion)", "D", 0, 0, 0, push(0.0055, 0.003, X.red)));
+  return root;
+}
+
+// ─────────────────────── SAITEK CYBORG F.L.Y. 5 ───────────────────────
+// Socle en Y noir et argent, levier de gaz sur la gauche, 4 touches en arc
+// côté pilote ; manche réglable à tête anguleuse.
+export function buildFly5(): G {
+  const root = new THREE.Group(); root.name = "FLY 5";
+  const H = 0.035;
+  root.add(loft([{ y: 0, rx: 0.07, rz: 0.07 }, { y: 0.012, rx: 0.07, rz: 0.07 }, { y: H, rx: 0.045, rz: 0.045 }], MAT.body, 48));
+  for (const [a, mat] of [[Math.PI * 0.2, MAT.alu], [Math.PI * 0.8, MAT.body], [Math.PI * 1.5, MAT.body]] as [number, THREE.Material][]) root.add(at(rbox(0.12, 0.016, 0.05, 0.02, mat), Math.cos(a) * 0.085, 0.008, Math.sin(a) * 0.085).rotateY(-a));
+  root.add(at(boot(0.032, 0.02), 0, H, 0));
+  [6, 7, 8, 9].forEach((n, i) => { const a = Math.PI * (0.32 + i * 0.12); root.add(ctl(`Socle ${n}`, String(n), Math.cos(a) * 0.058, 0.022, Math.sin(a) * 0.058, key(0.014, 0.012, MAT.alu).rotateY(-a + Math.PI / 2))); });
+  root.add(ctl("Arrière G", "10", -0.03, 0.03, -0.045, push(0.005, 0.003, MAT.alu)));
+  root.add(ctl("Arrière D", "11", 0.03, 0.03, -0.045, push(0.005, 0.003, MAT.alu)));
+  root.add(ctl("Bouton du socle", "14", 0.075, 0.017, 0.045, push(0.006, 0.003, MAT.alu)));
+  root.add(ctl("Levier de gaz", "GAZ", -0.085, 0.02, 0.01, at(cyl(0.011, 0.011, 0.05, MAT.plastic, 24).rotateZ(Math.PI / 2.4), 0, 0.02, 0)));
+  const grip = grp(root, 0, H + 0.018, 0, -0.16);
+  grip.add(ctl("Torsion", "TORSION", 0, 0, 0, twistRing(0.019, MAT.alu)));
+  grip.add(at(fighterGrip(0.95, MAT.body), 0, 0.006, 0));
+  axesPad(grip, 0.08, 0.03);
+  grip.add(ctl("Gâchette", "1", 0, 0.138, -0.032, trigger(0.03, 0.012, MAT.alu)));
+  grip.add(ctl("Molette", "MOLETTE", 0.03, 0.14, 0.0, knurledKnob(0.006, 0.006, MAT.knurl).rotateX(Math.PI / 2)));
+  const head = grp(grip, 0, 0.176, 0.02, 0.9);
+  head.add(at(chamferBox(0.07, 0.006, 0.056, 0.014, MAT.alu), 0, -0.002, -0.004));
+  head.add(ctl("Chapeau", "POV", 0, 0.002, -0.004, hat(0.0078, MAT.plastic, "castle")));
+  head.add(ctl("Tête 4", "4", -0.022, 0.002, -0.014, key(0.012, 0.01, MAT.plastic))); head.add(ctl("Tête 5", "5", 0.022, 0.002, -0.014, key(0.012, 0.01, MAT.plastic)));
+  head.add(ctl("Tête 2", "2", -0.022, 0.002, 0.008, key(0.012, 0.01, MAT.plastic))); head.add(ctl("Tête 3", "3", 0.022, 0.002, 0.008, key(0.012, 0.01, MAT.plastic)));
+  return root;
+}
+
+// ─────────────────────── LOGITECH G940 (MANCHE) ───────────────────────
+// Gros socle gris à retour de force, trois molettes de trim côté pilote ;
+// tête : bouton Fire rouge, S1–S5, mini-stick, chapeau.
+export function buildG940(): G {
+  const root = new THREE.Group(); root.name = "G940";
+  const H = 0.07;
+  root.add(at(chamferBox(0.22, H, 0.24, 0.03, X.darkGrey), 0, H / 2, 0));
+  root.add(at(rbox(0.09, 0.004, 0.09, 0.01, MAT.gloss), 0, H + 0.002, -0.02));
+  root.add(at(boot(0.034, 0.024), 0, H + 0.004, -0.02));
+  ["Trim 1", "Trim 2", "Trim 3"].forEach((n, i) => root.add(ctl(n, n.toUpperCase(), -0.03 + i * 0.03, H + 0.001, 0.085, knurledKnob(0.009, 0.006, MAT.plastic))));
+  root.add(at(decal("G940", 0.012, "#c9ced4"), 0.06, H * 0.5, 0.1206).rotateX(Math.PI / 2));
+  const grip = grp(root, 0, H + 0.03, -0.02, -0.12);
+  grip.add(fighterGrip(1.06, MAT.body));
+  axesPad(grip, 0.09, 0.033);
+  grip.add(ctl("Gâchette", "TIR 1·9", 0, 0.156, -0.035, trigger(0.034, 0.012, MAT.plastic)));
+  grip.add(ctl("S5", "S5", 0, 0.075, -0.031, push(0.005, 0.003, X.grey).rotateX(FRONT)));
+  grip.add(ctl("S4", "S4", -0.03, 0.15, 0.006, push(0.005, 0.003, X.grey).rotateZ(LEFT)));
+  const head = grp(grip, 0, 0.19, 0.02, 0.9);
+  head.add(at(rbox(0.066, 0.004, 0.058, 0.012, MAT.plastic), 0, -0.001, -0.004));
+  head.add(ctl("Fire", "FIRE", -0.018, 0.001, -0.02, push(0.0062, 0.004, X.red)));
+  head.add(ctl("Chapeau", "POV", 0.016, 0.001, -0.018, hat(0.0078, X.grey, "dome")));
+  head.add(ctl("Mini-stick", "MINI", -0.016, 0.001, 0.006, ministick(0.006)));
+  head.add(ctl("S1", "S1", 0.006, 0.001, 0.004, push(0.0045, 0.003, X.grey))); head.add(ctl("S2", "S2", 0.02, 0.001, 0.008, push(0.0045, 0.003, X.grey))); head.add(ctl("S3", "S3", 0.008, 0.001, 0.018, push(0.0045, 0.003, X.grey)));
+  return root;
+}
+
+// ─────────────────────── DEFENDER COBRA M5 ───────────────────────
+// Socle métallique gris clair, poignée grise à boutons rouges.
+export function buildCobraM5(): G {
+  const root = new THREE.Group(); root.name = "Cobra M5";
+  const H = 0.05;
+  root.add(at(chamferBox(0.19, H, 0.2, 0.02, X.grey), 0, H / 2, 0));
+  root.add(at(cyl(0.04, 0.042, 0.004, MAT.plastic, 48), 0, H + 0.002, -0.01));
+  root.add(at(boot(0.032, 0.024), 0, H + 0.004, -0.01));
+  root.add(at(decal("COBRA M5", 0.006, "#23282e"), 0.03, H + 0.0006, 0.07));
+  const grip = grp(root, 0, H + 0.03, -0.01, -0.12);
+  grip.add(ctl("Torsion", "TORSION", 0, 0, 0, twistRing(0.02, MAT.plastic)));
+  grip.add(at(fighterGrip(1.04, X.darkGrey), 0, 0.006, 0));
+  axesPad(grip, 0.088, 0.033);
+  grip.add(ctl("Gâchette", "1", 0, 0.158, -0.035, trigger(0.034, 0.012, X.grey)));
+  grip.add(ctl("Gâchette secondaire", "2", -0.03, 0.156, 0.004, push(0.006, 0.004, X.red).rotateZ(LEFT)));
+  grip.add(ctl("Palette auriculaire", "9", 0, 0.08, -0.032, at(rbox(0.01, 0.036, 0.005, 0.002, X.red), 0, 0, -0.004)));
+  const head = grp(grip, 0, 0.192, 0.02, 0.9);
+  head.add(at(rbox(0.066, 0.004, 0.056, 0.012, X.grey), 0, -0.001, -0.004));
+  head.add(ctl("Chapeau POV", "POV", 0.0, 0.001, -0.018, hat(0.008, X.grey, "dome")));
+  head.add(ctl("Chapeau", "5–8", 0.0, 0.001, 0.008, hat(0.0066, MAT.plastic, "castle")));
+  head.add(ctl("Bouton rouge G", "3", -0.022, 0.001, -0.004, push(0.0056, 0.0035, X.red)));
+  head.add(ctl("Bouton rouge D", "4", 0.022, 0.001, -0.004, push(0.0056, 0.0035, X.red)));
+  return root;
+}
+
+// ─────────────────────── VIRPIL : base WarBRD commune ───────────────────────
+function virpilBase(root: G): G {
+  const W = 0.15, H = 0.012;
+  root.add(at(rbox(W, H, W, 0.008, X.steel), 0, H / 2, 0));
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => root.add(at(cyl(0.004, 0.004, 0.003, MAT.gunmetal, 6), a * (W / 2 - 0.012), H + 0.0015, b * (W / 2 - 0.012))));
+  root.add(at(rbox(0.1, 0.045, 0.1, 0.01, MAT.body), 0, H + 0.0225, 0));
+  root.add(at(decal("VIRPIL", 0.007, "#c9ced4"), 0, H + 0.0006, 0.062));
+  root.add(at(boot(0.036, 0.026), 0, H + 0.045, 0));
+  root.add(at(knurledKnob(0.022, 0.018, MAT.plastic), 0, H + 0.078, 0));
+  return grp(root, 0, H + 0.09, 0, -0.14);
+}
+// WarBRD Delta : tête compacte, chapeau lumineux bleu, mini-stick, molette.
+export function buildDelta(): G {
+  const root = new THREE.Group(); root.name = "WarBRD Delta";
+  const grip = virpilBase(root);
+  grip.add(ctl("Torsion", "TORSION", 0, 0, 0, twistRing(0.023, X.steel)));
+  grip.add(at(fighterGrip(1.06, MAT.body), 0, 0.01, 0));
+  axesPad(grip, 0.09, 0.034);
+  grip.add(ctl("Gâchette", "TIR 1·2", 0, 0.16, -0.036, trigger(0.036, 0.012, X.red)));
+  grip.add(ctl("Bouton de gâchette", "3", 0, 0.186, -0.04, push(0.005, 0.003, MAT.plastic, X.steel).rotateX(FRONT)));
+  grip.add(ctl("Molette", "MOLETTE", 0.02, 0.15, -0.03, knurledKnob(0.006, 0.006, MAT.knurl).rotateZ(Math.PI / 2)));
+  const head = grp(grip, 0, 0.2, 0.02, 0.9);
+  head.add(at(rbox(0.07, 0.004, 0.058, 0.014, MAT.plastic), 0, -0.001, -0.004));
+  const blue = new THREE.MeshStandardMaterial({ color: 0x3aa0ff, emissive: 0x1f7fe0, emissiveIntensity: 1.2, roughness: 0.4 });
+  head.add(ctl("Chapeau lumineux", "H·LED", 0.0, 0.001, -0.018, hat(0.0075, MAT.plastic, "dome"), mesh(new THREE.TorusGeometry(0.0095, 0.001, 8, 32), blue, 0, 0.002, 0).rotateX(Math.PI / 2)));
+  head.add(ctl("Chapeau gauche", "H·G", -0.02, 0.001, 0.006, hat(0.0064, MAT.plastic, "castle")));
+  head.add(ctl("Chapeau droit", "H·D", 0.02, 0.001, 0.006, hat(0.0064, MAT.plastic, "cross")));
+  head.add(ctl("Mini-stick", "MINI", 0.0, 0.001, 0.016, ministick(0.006)));
+  return root;
+}
+// WarBRD : poignée simple, gros bouton rouge, bouton vert, deux chapeaux.
+export function buildWarBRD(): G {
+  const root = new THREE.Group(); root.name = "WarBRD";
+  const grip = virpilBase(root);
+  grip.add(ctl("Torsion", "TORSION", 0, 0, 0, twistRing(0.023, X.steel)));
+  grip.add(at(fighterGrip(1.06, MAT.body), 0, 0.01, 0));
+  axesPad(grip, 0.09, 0.034);
+  grip.add(ctl("Gâchette", "TIR 1·2", 0, 0.16, -0.036, trigger(0.036, 0.012, X.red)));
+  grip.add(ctl("Bouton auriculaire", "4", 0, 0.07, -0.031, push(0.0056, 0.004, X.red).rotateX(FRONT)));
+  grip.add(ctl("Chapeau pouce", "POUCE", -0.036, 0.165, 0.004, hat(0.0066, MAT.plastic, "castle").rotateZ(LEFT)));
+  const head = grp(grip, 0, 0.2, 0.02, 0.9);
+  head.add(at(rbox(0.07, 0.004, 0.058, 0.014, MAT.plastic), 0, -0.001, -0.004));
+  head.add(ctl("Bouton rouge", "3", -0.014, 0.001, 0.004, push(0.0085, 0.004, X.red)));
+  head.add(ctl("Bouton vert", "19", 0.0, 0.001, -0.02, push(0.0045, 0.003, new THREE.MeshStandardMaterial({ color: 0x35c95a, emissive: 0x1f9a3e, emissiveIntensity: 0.9 }))));
+  head.add(ctl("Chapeau haut", "H1", 0.02, 0.001, -0.012, hat(0.0072, MAT.plastic, "dome")));
+  return root;
+}
+// MongoosT-50CM2 : poignée de Su-35, boutons rouges, levier de frein avant.
+export function buildT50(): G {
+  const root = new THREE.Group(); root.name = "MT-50CM2";
+  const grip = virpilBase(root);
+  grip.add(at(fighterGrip(1.12, MAT.body), 0, 0.006, 0));
+  axesPad(grip, 0.095, 0.035);
+  grip.add(ctl("Gâchette", "TIR 1·2", 0, 0.165, -0.038, trigger(0.038, 0.012, X.red)));
+  grip.add(ctl("Gâchette rabattable", "RABAT", 0, 0.196, -0.044, at(rbox(0.013, 0.006, 0.026, 0.002, MAT.plastic), 0, 0, -0.007)));
+  grip.add(ctl("Levier de frein", "FREIN", 0, 0.05, -0.04, at(rbox(0.01, 0.09, 0.005, 0.002, MAT.plastic), 0, 0.03, -0.01).rotateX(0.2)));
+  grip.add(ctl("Bouton auriculaire", "6", 0, 0.085, -0.033, push(0.005, 0.003, X.red).rotateX(FRONT)));
+  grip.add(ctl("Chapeau pouce", "POUCE", -0.039, 0.176, 0.004, hat(0.0066, MAT.plastic, "castle").rotateZ(LEFT)));
+  const head = grp(grip, 0, 0.21, 0.022, 0.9);
+  head.add(at(rbox(0.074, 0.004, 0.062, 0.014, MAT.plastic), 0, -0.001, -0.004));
+  head.add(ctl("Bouton rouge", "4", -0.022, 0.001, -0.02, push(0.006, 0.004, X.red)));
+  head.add(ctl("Chapeau trim", "TRIM", 0.004, 0.001, -0.022, hat(0.0075, X.red, "dome")));
+  head.add(ctl("Bouton noir", "5", 0.026, 0.001, -0.016, push(0.005, 0.003, MAT.plastic, X.steel)));
+  head.add(ctl("Chapeau 2", "H2", 0.018, 0.001, 0.008, hat(0.0064, X.red, "castle")));
+  head.add(ctl("Chapeau 3", "H3", -0.014, 0.001, 0.01, hat(0.0064, X.red, "cross")));
+  return root;
+}
+
+// ─────────────────────── WINWING ORION 2 + POIGNÉE F-16 ───────────────────────
+// Embase métal noire, poignée de F-16 : bouton rouge, trim, DMS, TMS, CMS.
+export function buildOrionF16(): G {
+  const root = new THREE.Group(); root.name = "Orion 2 F-16";
+  const H = 0.055;
+  root.add(at(rbox(0.18, H, 0.18, 0.006, MAT.body), 0, H / 2, 0));
+  root.add(at(rbox(0.11, 0.004, 0.11, 0.004, MAT.gunmetal), 0, H + 0.002, 0));
+  root.add(at(decal("WINWING", 0.007, "#c9ced4"), 0, H * 0.5, 0.0906).rotateX(Math.PI / 2));
+  root.add(at(boot(0.036, 0.028), 0, H + 0.004, 0));
+  const grip = grp(root, 0, H + 0.036, 0, -0.12);
+  grip.add(fighterGrip(1.12, MAT.plastic));
+  axesPad(grip, 0.095, 0.035);
+  grip.add(ctl("Gâchette", "TIR 1·2", 0, 0.165, -0.038, trigger(0.036, 0.012, MAT.plastic)));
+  const fr = grp(grip, 0, 0.07, -0.031, FRONT);
+  fr.add(ctl("Bouton auriculaire", "3", 0, 0, 0.022, push(0.0048, 0.003, MAT.gunmetal)));
+  fr.add(ctl("Palette", "4", 0, 0.008, -0.012, rbox(0.01, 0.006, 0.04, 0.002, MAT.gunmetal)));
+  grip.add(ctl("Chapeau pouce (CMS)", "CMS", -0.039, 0.172, 0.004, hat(0.0064, X.grey, "dome").rotateZ(LEFT)));
+  const head = grp(grip, 0, 0.2, 0.02, 0.85);
+  head.add(at(rbox(0.066, 0.004, 0.056, 0.012, MAT.plastic), 0, -0.001, -0.006));
+  head.add(ctl("Bouton rouge", "20", -0.02, 0.001, -0.022, push(0.0062, 0.004, X.red)));
+  head.add(ctl("Trim", "TRIM", 0.018, 0.001, -0.02, hat(0.0085, X.grey, "dome")));
+  head.add(ctl("Chapeau gauche (TMS)", "TMS", -0.016, 0.001, 0.004, hat(0.0066, MAT.plastic, "cross")));
+  head.add(ctl("Chapeau droit (DMS)", "DMS", 0.016, 0.001, 0.008, hat(0.0066, MAT.plastic, "castle")));
+  return root;
+}
+
 export const EXTRA_MODELS: { test: RegExp; build: () => G }[] = [
   { test: /T\.?16000M/i, build: buildT16000M },
   { test: /TWCS/i, build: buildTWCS },
@@ -648,5 +893,16 @@ export const EXTRA_MODELS: { test: RegExp; build: () => G }[] = [
   { test: /Fighterstick/i, build: buildCHStick },
   { test: /Pro Throttle/i, build: buildCHThrottle },
   { test: /VelocityOne/i, build: buildVelocityOne },
+  { test: /X-55.*manche/i, build: buildStick },
+  { test: /X-55.*gaz/i, build: buildThrottle },
+  { test: /X-65F/i, build: buildX65F },
+  { test: /X-45/i, build: buildX45 },
+  { test: /F\.L\.Y/i, build: buildFly5 },
+  { test: /G940/i, build: buildG940 },
+  { test: /Cobra M5/i, build: buildCobraM5 },
+  { test: /WarBRD Delta/i, build: buildDelta },
+  { test: /WarBRD/i, build: buildWarBRD },
+  { test: /50CM2/i, build: buildT50 },
+  { test: /Orion 2/i, build: buildOrionF16 },
 ];
 registerModels(EXTRA_MODELS);
