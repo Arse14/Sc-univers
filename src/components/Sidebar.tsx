@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { checkForUpdate, installUpdate } from "../lib/updater";
+import { isTauri } from "../lib/tauri";
 import { APP_VERSION } from "../lib/version";
 import { Brand, ModuleIcon } from "./Icons";
 
@@ -35,6 +37,27 @@ export function useClock() {
   useEffect(() => { const id = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(id); }, []);
   // Heure standard UEE : l'année en jeu est l'année réelle + 930
   return { utc: now.toISOString().slice(11, 19), year: now.getUTCFullYear() + 930 };
+}
+
+/** Vérification de mise à jour toujours visible : état clair, erreur affichée, installation en un clic. */
+function UpdateCheck() {
+  const [state, setState] = useState<{ kind: "idle" | "busy" | "ok" | "err" | "new"; text: string }>({ kind: "idle", text: "" });
+  if (!isTauri) return null;
+  const run = async () => {
+    setState({ kind: "busy", text: "Vérification…" });
+    try {
+      const u = await checkForUpdate();
+      if (!u) { setState({ kind: "ok", text: "Tu as la dernière version." }); return; }
+      setState({ kind: "new", text: `Version ${u.version} : installation…` });
+      await installUpdate((p) => setState({ kind: "new", text: p === null ? "Téléchargement…" : p < 100 ? `Téléchargement ${p} %` : "Installation, redémarrage…" }));
+    } catch (e) { setState({ kind: "err", text: `Échec : ${String(e).slice(0, 120)}` }); }
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <button type="button" className="btn sm" onClick={run} disabled={state.kind === "busy" || state.kind === "new"} style={{ alignSelf: "flex-start" }}>Chercher une mise à jour</button>
+      {state.text && <span className="mono" style={{ fontSize: 10, lineHeight: 1.4, color: state.kind === "err" ? "var(--amber)" : state.kind === "ok" ? "var(--green)" : "var(--text)" }}>{state.text}</span>}
+    </div>
+  );
 }
 
 export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m: ModuleId) => void }) {
@@ -75,6 +98,7 @@ export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m
         <div style={{ fontWeight: 600, fontSize: 15 }}><span className="status-dot" />Aucune modification du jeu</div>
         <div className="telemetry"><span>UEE STD</span><b>{clock.utc} · {clock.year}</b></div>
         <div className="mono" style={{ fontSize: 12, color: "var(--dimmer)" }}>v{APP_VERSION} · NON AFFILIÉ À CIG</div>
+        <UpdateCheck />
         <div className="status-bar" />
       </div>
     </nav>
