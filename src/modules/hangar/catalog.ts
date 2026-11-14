@@ -49,7 +49,7 @@ export interface Ship {
 
 const API = "https://api.fleetyards.net/v1";
 const TTL = 7 * 24 * 3600 * 1000;
-const CATALOG_KEY = "hangar-catalog-v2";
+const CATALOG_KEY = "hangar-catalog-v3";
 const PAGE = 40;
 
 async function getJson<T>(url: string): Promise<T> {
@@ -63,19 +63,28 @@ async function getJson<T>(url: string): Promise<T> {
 type Any = any;
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
+/** « Teasa Spaceport, Lorville » à partir de la boutique FleetYards. */
 function place(x: Any): string {
-  return [x?.shop?.station?.name ?? x?.station?.name, x?.shop?.station?.celestialObject?.name ?? x?.celestialObject?.name].filter(Boolean).join(", ");
+  const loc = x?.shop?.location;
+  const parts = [loc?.name, loc?.parentName].filter((v: unknown) => typeof v === "string" && v);
+  if (parts.length) return parts.join(", ");
+  return typeof x?.location === "string" ? x.location.replace(`${x?.shop?.name ?? ""} - `, "") : "";
 }
 
-/** Regroupe les lignes identiques (28 points de location au même prix n'apportent rien à l'écran ni en mémoire). */
-function shops(list: Any[], priceKey: string[]): { name: string; where: string; price: number }[] {
+/** Boutiques triées par prix ; pour la location on ne garde que le tarif à la journée. */
+function shops(list: Any[], rental: boolean): { name: string; where: string; price: number }[] {
   const out: { name: string; where: string; price: number }[] = [];
+  const seen = new Set<string>();
   for (const x of list ?? []) {
-    const price = priceKey.map((k) => x?.[k]).find((v) => typeof v === "number") ?? 0;
-    out.push({ name: x?.shop?.name ?? "?", where: place(x), price });
+    if (rental && x?.timeRange && x.timeRange !== "1-day") continue;
+    const price = typeof x?.price === "number" ? x.price : 0;
+    const row = { name: x?.shop?.name ?? "?", where: place(x), price };
+    const k = `${row.name}|${row.where}|${row.price}`;
+    if (seen.has(k)) continue;
+    seen.add(k); out.push(row);
   }
   out.sort((a, b) => a.price - b.price);
-  return out.slice(0, 12);
+  return out.slice(0, 14);
 }
 
 function compact(m: Any): Ship {
@@ -92,8 +101,8 @@ function compact(m: Any): Ship {
     cargo: num(met.cargo), length: num(met.length), beam: num(met.beam), height: num(met.height), mass: num(met.mass), hull: num(met.hullHealth),
     scm: num(sp.scmSpeed), max: num(sp.maxSpeed), dps: num(m.burstDps) ?? num(met.burstDps),
     pledge: num(m.pledgePrice), priceAuec: num(m.price),
-    soldAt: shops(av.soldAt, ["sellPrice", "price"]),
-    rentAt: shops(av.rentalAt, ["rentalPrice1Day", "price"]),
+    soldAt: shops(av.soldAt, false),
+    rentAt: shops(av.rentalAt, true),
     onSale: !!m.onSale,
     img: med.storeImage?.mediumUrl ?? med.angledView?.mediumUrl ?? null,
     imgLarge: med.storeImage?.largeUrl ?? med.storeImage?.url ?? null,
@@ -290,12 +299,74 @@ export async function loadShipFittings(slug: string): Promise<ShipFittings | nul
   }
 }
 
-/** Description FR depuis le wiki (à la demande, par vaisseau). */
-export async function loadFrenchDescription(rsiName: string): Promise<string | null> {
-  try {
-    const res = await getJson<{ data: { description?: { fr_FR?: string }; game_description?: { fr_FR?: string } } }>(`https://api.star-citizen.wiki/api/v2/vehicles/${encodeURIComponent(rsiName)}`);
-    return res.data.description?.fr_FR || res.data.game_description?.fr_FR || null;
-  } catch { return null; }
+/* ---------- données du jeu (wiki Star Citizen) : équipage, boucliers, quantique, assurance… ---------- */
+
+export interface GameSheet {
+  slug: string;
+  at: number;
+  version: string | null;        // version du jeu dont viennent les chiffres
+  descFr: string | null;
+  career: string | null; role: string | null;
+  crew: { min: number | null; max: number | null; weapon: number | null; operation: number | null };
+  seating: { stations: number | null; ejection: number | null; pods: number | null; jump: number | null; beds: number | null; medBeds: number | null };
+  shield: { hp: number | null; regen: number | null; regenTime: number | null; type: string | null };
+  armor: { health: number | null; deflectPhysical: number | null; deflectEnergy: number | null };
+  quantum: { speed: number | null; spool: number | null; fuel: number | null; range: number | null };
+  emission: { ir: number | null; emIdle: number | null; emMax: number | null };
+  insurance: { claim: number | null; expedite: number | null; cost: number | null };
+  weaponry: { pilotDps: number | null; pilotAlpha: number | null; pilotSustained: number | null; turretDps: number | null; missiles: number | null; missileDamage: number | null; pilotGuns: number | null; mannedTurrets: number | null; remoteTurrets: number | null; countermeasures: number | null };
+  fuelIntake: number | null;
+  msrp: number | null;
+}
+
+function compactSheet(slug: string, d: Any): GameSheet {
+  const snap = d.weapon_snapshot ?? d.shield?.weapon_snapshot ?? {};
+  const w = d.weaponry ?? {};
+  return {
+    slug, at: Date.now(), version: typeof d.version === "string" ? d.version.split("-")[0] : null,
+    descFr: d.description?.fr_FR || d.game_description?.fr_FR || null,
+    career: d.career ?? null, role: d.role ?? null,
+    crew: { min: num(d.crew?.min), max: num(d.crew?.max), weapon: num(d.crew?.weapon), operation: num(d.crew?.operation) },
+    seating: { stations: num(d.seating?.crew_stations), ejection: num(d.seating?.ejection_seats), pods: num(d.seating?.escape_pods), jump: num(d.seating?.jump_seats), beds: num(d.seating?.beds), medBeds: num(d.seating?.medical_beds) },
+    shield: { hp: num(d.shield?.hp) ?? num(d.shield_hp), regen: num(d.shield?.regeneration), regenTime: num(d.shield?.regeneration_time), type: d.shield?.face_type ?? d.shield_face_type ?? null },
+    armor: { health: num(d.armor?.health), deflectPhysical: num(d.armor?.deflection?.physical), deflectEnergy: num(d.armor?.deflection?.energy) },
+    quantum: { speed: num(d.quantum?.quantum_speed), spool: num(d.quantum?.quantum_spool_time), fuel: num(d.quantum?.quantum_fuel_capacity), range: num(d.quantum?.quantum_range) },
+    emission: { ir: num(d.emission?.ir), emIdle: num(d.emission?.em_idle), emMax: num(d.emission?.em_max) },
+    insurance: { claim: num(d.insurance?.claim_time), expedite: num(d.insurance?.expedite_time), cost: num(d.insurance?.expedite_cost) },
+    weaponry: {
+      pilotDps: num(w.pilot_dps), pilotAlpha: num(w.pilot_alpha), pilotSustained: num(w.pilot_sustained_dps), turretDps: num(w.turret_dps),
+      missiles: num(w.missiles?.count) ?? num(snap.missile_count), missileDamage: num(w.total_missile_damage),
+      pilotGuns: num(snap.pilot_guns_count), mannedTurrets: num(snap.turrets_manned_count), remoteTurrets: num(snap.turrets_remote_count), countermeasures: num(snap.countermeasures_count),
+    },
+    fuelIntake: num(d.fuel?.intake_rate), msrp: num(d.msrp),
+  };
+}
+
+const sheetMem = new Map<string, GameSheet>();
+
+/**
+ * Fiche « données du jeu » : équipage mini / maxi, sièges, boucliers, blindage,
+ * saut quantique, signatures, assurance. La réponse brute pèse ≈ 400 Ko, on
+ * n'en garde que ces champs. Recherche par identifiant puis par nom.
+ */
+export async function loadGameSheet(slug: string, rsiName: string): Promise<GameSheet | null> {
+  const hit = sheetMem.get(slug);
+  if (hit) return hit;
+  const key = `hangar-game-${slug}`;
+  const c = await loadStore<GameSheet>(key).catch(() => null);
+  if (c && Date.now() - c.at < TTL) { remember(sheetMem, slug, c); return c; }
+  for (const id of [slug, rsiName]) {
+    try {
+      const res = await getJson<{ data: Any }>(`https://api.star-citizen.wiki/api/v2/vehicles/${encodeURIComponent(id)}`);
+      if (!res?.data?.name) continue;
+      const g = compactSheet(slug, res.data);
+      await saveStore(key, g).catch(() => undefined);
+      remember(sheetMem, slug, g);
+      return g;
+    } catch { /* essai suivant */ }
+  }
+  if (c) { remember(sheetMem, slug, c); return c; }
+  return null;
 }
 
 /* ---------- correspondance HangarXPLOR → catalogue ---------- */

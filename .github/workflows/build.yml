@@ -58,22 +58,7 @@ jobs:
           (Get-Content src-tauri/Cargo.toml) -replace '^version = ".*"', "version = `"$v`"" | Set-Content src-tauri/Cargo.toml
           Write-Host "Version fixée à $v"
 
-      - name: Build (artefact de test)
-        if: ${{ env.RELEASE_TAG == '' }}
-        run: npm run tauri build
-
-      - name: Déposer les installeurs
-        if: ${{ env.RELEASE_TAG == '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: SC-Univers-windows-${{ github.sha }}
-          path: |
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/msi/*.msi
-          if-no-files-found: error
-
       - name: Clé de signature (nettoyage des espaces et sauts de ligne)
-        if: ${{ env.RELEASE_TAG != '' }}
         shell: pwsh
         env:
           RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -87,6 +72,20 @@ jobs:
           "TAURI_SIGNING_PRIVATE_KEY=$k" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$p" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           Write-Host "Clé chargée ($($k.Length) caractères)"
+
+      - name: Build (artefact de test)
+        if: ${{ env.RELEASE_TAG == '' }}
+        run: npm run tauri build
+
+      - name: Déposer les installeurs
+        if: ${{ env.RELEASE_TAG == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: SC-Univers-windows-${{ github.sha }}
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
 
       - name: Release signée (+ latest.json pour la mise à jour auto)
         if: ${{ env.RELEASE_TAG != '' }}

@@ -5,7 +5,7 @@ import { Pic } from "../../components/Pic";
 import { SHIPS as ART } from "../../lib/images";
 import { isTauri, loadStore, pickFile, readTextFile } from "../../lib/tauri";
 import type { AppSettings } from "../settings/defaults";
-import { GROUP_FR, loadCatalog, loadFrenchDescription, loadShipDetail, loadShipFittings, type Fitting, type Ship, type ShipDetail, type ShipFittings } from "./catalog";
+import { GROUP_FR, loadCatalog, loadGameSheet, loadShipDetail, loadShipFittings, type Fitting, type GameSheet, type Ship, type ShipDetail, type ShipFittings } from "./catalog";
 import { ACQUIRED_FR, INSURANCE_FR, activeFleet, addShip, costUsd, emptyHangar, exportFleet, importHangarXplor, loadHangar, newFleet, parseFleetFile, saveHangar, updateFleet, type Acquired, type Hangar, type Insurance, type OwnedShip } from "./hangar";
 import { ShipViewer } from "./ShipViewer";
 
@@ -38,7 +38,7 @@ export function HangarPage() {
   const [sel, setSel] = useState<Ship | null>(null);
   const [detail, setDetail] = useState<ShipDetail | null | "loading">(null);
   const [fit, setFit] = useState<ShipFittings | null | "loading" | "none">(null);
-  const [descFr, setDescFr] = useState<string | null | undefined>(undefined);
+  const [game, setGame] = useState<GameSheet | null | undefined>(undefined);
   const [tab, setTab] = useState<Tab>("specs");
   const [editing, setEditing] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -71,10 +71,11 @@ export function HangarPage() {
 
   // ----- fiche -----
   const select = (s: Ship | null) => {
-    setSel(s); setTab("specs"); setDetail(s ? "loading" : null); setFit(null); setDescFr(undefined);
+    setSel(s); setTab("specs"); setDetail(s ? "loading" : null); setFit(null); setGame(undefined);
     if (!s) return;
     loadShipDetail(s.slug).then((d) => setDetail((cur) => (cur === "loading" ? d : cur)));
-    loadFrenchDescription(s.rsiName).then(setDescFr);
+    const slug = s.slug;
+    loadGameSheet(slug, s.rsiName).then((g) => setGame((cur) => (cur === undefined ? (g && g.slug === slug ? g : null) : cur)));
     requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
   useEffect(() => {
@@ -151,6 +152,9 @@ export function HangarPage() {
   const stat = STATUS[sel?.status ?? ""] ?? { label: (sel?.status ?? "").toUpperCase(), color: "var(--dim)" };
   const d = detail && detail !== "loading" ? detail : null;
   const crew = (s: Ship) => `${s.crewMin ?? "?"}${s.crewMax && s.crewMax !== s.crewMin ? `–${s.crewMax}` : ""}`;
+  const g = game ?? null;
+  const km = (m: number | null | undefined) => (m == null ? "—" : m >= 1e9 ? `${nf(m / 1e9, 1)} Gm` : `${nf(m / 1000)} km`);
+  const mins = (v: number | null | undefined) => (v == null ? "—" : v >= 1 ? `${nf(v, 1)} min` : `${nf(v * 60)} s`);
 
   return (
     <>
@@ -299,16 +303,20 @@ export function HangarPage() {
 
                 {tab === "specs" && (
                   <div className="spec-cols">
-                    <Spec title="GÉNÉRAL" rows={[["Taille", SIZE_FR[sel.size] ?? sel.sizeLabel], ["Équipage", crew(sel)], ["Couchettes", nf(d?.beds)], ["Masse", sel.mass ? `${nf(sel.mass / 1000, 1)} t` : "—"], ["Atterrissage planétaire", d?.canLand == null ? "—" : d.canLand ? "Oui" : "Non"], ["Taille de pad", d?.dockSize ? d.dockSize : "—"]]} />
-                    <Spec title="DIMENSIONS" rows={[["Longueur", unit(sel.length, "m", 1)], ["Envergure", unit(sel.beam, "m", 1)], ["Hauteur en vol", unit(sel.height, "m", 1)], ["Hauteur posé", unit(d?.landed.height, "m", 1)], ["Signature (x / y / z)", d?.crossSection ? `${nf(d.crossSection.x)} / ${nf(d.crossSection.y)} / ${nf(d.crossSection.z)}` : "—"]]} />
+                    <Spec title="GÉNÉRAL" rows={[["Taille", SIZE_FR[sel.size] ?? sel.sizeLabel], ["Carrière / rôle", g?.career || g?.role ? [g?.career, g?.role].filter(Boolean).join(" · ") : sel.cls], ["Masse", sel.mass ? `${nf(sel.mass / 1000, 1)} t` : "—"], ["Atterrissage planétaire", d?.canLand == null ? "—" : d.canLand ? "Oui" : "Non"], ["Taille de pad", d?.dockSize ? d.dockSize : "—"]]} />
+                    <Spec title="ÉQUIPAGE ET SIÈGES" rows={[["Équipage minimum", nf(g?.crew.min ?? sel.crewMin)], ["Équipage maximum", nf(g?.crew.max ?? sel.crewMax)], ["Dont postes d'armes", nf(g?.crew.weapon)], ["Postes d'équipage", nf(g?.seating.stations)], ["Strapontins", nf(g?.seating.jump)], ["Couchettes", nf(g?.seating.beds ?? d?.beds)], ["Lits médicaux", nf(g?.seating.medBeds)], ["Sièges éjectables / capsules", g ? `${nf(g.seating.ejection)} / ${nf(g.seating.pods)}` : "—"]]} />
+                    <Spec title="DIMENSIONS" rows={[["Longueur", unit(sel.length, "m", 1)], ["Envergure", unit(sel.beam, "m", 1)], ["Hauteur en vol", unit(sel.height, "m", 1)], ["Hauteur posé", unit(d?.landed.height, "m", 1)], ["Longueur / envergure posé", d?.landed.length != null ? `${nf(d.landed.length, 1)} / ${nf(d.landed.beam, 1)} m` : "—"]]} />
                     <Spec title="VOL" rows={[["Vitesse SCM", unit(d?.speeds.scm ?? sel.scm, "m/s")], ["SCM avec boost", unit(d?.speeds.scmBoost, "m/s")], ["Vitesse max (NAV)", unit(d?.speeds.max ?? sel.max, "m/s")], ["Tangage / lacet / roulis", d?.speeds.pitch != null ? `${nf(d.speeds.pitch)} / ${nf(d.speeds.yaw)} / ${nf(d.speeds.roll)} °/s` : "—"], ["Idem avec boost", d?.speeds.pitchBoost != null ? `${nf(d.speeds.pitchBoost, 1)} / ${nf(d.speeds.yawBoost, 1)} / ${nf(d.speeds.rollBoost, 1)} °/s` : "—"], ["Accélération avant / rétro", d?.speeds.accelMain != null ? `${nf(d.speeds.accelMain, 1)} / ${nf(d.speeds.accelRetro, 1)} m/s²` : "—"], ["0 ▸ SCM / arrêt depuis SCM", d?.speeds.toScm != null ? `${nf(d.speeds.toScm, 1)} s / ${nf(d.speeds.toStop, 1)} s` : "—"]]} />
                     <Spec title="CARGO ET STOCKAGE" rows={[["Cargo", unit(d?.maxCargo ?? sel.cargo, "SCU")], ...((d?.cargoHolds ?? []).map((h): [string, string] => [`Soute ${h.name}`, `${nf(h.capacity)} SCU${h.dims ? ` · ${h.dims}` : ""}${h.maxBox ? ` · caisse max ${h.maxBox} SCU` : ""}`])), ["Inventaire personnel", unit(d?.personalInventory, "SCU", 2)], ["Râteliers d'armes", d?.weaponRacks.length ? d.weaponRacks.map((r) => `${r.count} × ${r.slots} emplacements`).join(", ") : "—"], ["Hangars embarqués", d?.docks.length ? d.docks.map((k) => `${k.count} × ${k.type} ${k.size}`).join(", ") : "—"]]} />
-                    <Spec title="CARBURANT" rows={[["Hydrogène", unit(d?.hydrogen, "SCU", 1)], ["Quantique", unit(d?.quantum, "SCU", 1)]]} />
+                    <Spec title="CARBURANT ET SAUT QUANTIQUE" rows={[["Hydrogène", unit(d?.hydrogen, "SCU", 1)], ["Carburant quantique", unit(d?.quantum ?? g?.quantum.fuel, "SCU", 1)], ["Vitesse quantique", g?.quantum.speed != null ? `${nf(g.quantum.speed / 1000)} km/s` : "—"], ["Temps de charge", unit(g?.quantum.spool, "s", 1)], ["Autonomie quantique", km(g?.quantum.range)]]} />
+                    <Spec title="BOUCLIERS ET BLINDAGE" rows={[["Bouclier", g?.shield.hp != null ? `${nf(g.shield.hp)} HP${g.shield.type ? ` · ${g.shield.type === "Bubble" ? "bulle" : g.shield.type}` : ""}` : "—"], ["Régénération", g?.shield.regen != null ? `${nf(g.shield.regen)} HP/s` : "—"], ["Recharge complète", unit(g?.shield.regenTime, "s", 1)], ["Blindage", unit(g?.armor.health, "HP")], ["Déflexion physique / énergie", g?.armor.deflectPhysical != null ? `${nf(g.armor.deflectPhysical)} / ${nf(g.armor.deflectEnergy)}` : "—"]]} />
+                    <Spec title="SIGNATURES" rows={[["Infrarouge", nf(g?.emission.ir)], ["Électromagnétique au repos", nf(g?.emission.emIdle)], ["Électromagnétique max", nf(g?.emission.emMax)], ["Section radar (x / y / z)", d?.crossSection ? `${nf(d.crossSection.x)} / ${nf(d.crossSection.y)} / ${nf(d.crossSection.z)}` : "—"]]} />
+                    <Spec title="ASSURANCE" rows={[["Délai de réclamation", mins(g?.insurance.claim)], ["Délai en accéléré", mins(g?.insurance.expedite)], ["Coût de l'accéléré", unit(g?.insurance.cost, "aUEC")]]} />
                     <Spec title="COQUE" rows={[["Points de structure", unit(sel.hull, "HP")], ...((d?.hullParts ?? []).slice(0, 6).map((p): [string, string] => [p.name, `${nf(p.health)} HP`]))]} />
-                    <Spec title="ARMEMENT (RÉSUMÉ)" rows={[["Emplacements d'armes", d?.weapons.sizes.length ? d.weapons.sizes.map((w) => `${w.count} × S${w.size}`).join(" · ") : "—"], ["Dégâts alpha", nf(d?.weapons.alpha, 1)], ["DPS en rafale", nf(d?.weapons.burst ?? sel.dps)], ["DPS soutenu", d?.weapons.sustainMin != null ? `${nf(d.weapons.sustainMin)} – ${nf(d.weapons.sustainMax)}` : "—"]]} />
+                    <Spec title="ARMEMENT (RÉSUMÉ)" rows={[["Emplacements d'armes", d?.weapons.sizes.length ? d.weapons.sizes.map((w) => `${w.count} × S${w.size}`).join(" · ") : "—"], ["Dégâts alpha", nf(d?.weapons.alpha, 1)], ["DPS en rafale", nf(d?.weapons.burst ?? sel.dps)], ["DPS soutenu", d?.weapons.sustainMin != null ? `${nf(d.weapons.sustainMin)} – ${nf(d.weapons.sustainMax)}` : "—"], ["Armes pilote / DPS pilote", g?.weaponry.pilotGuns != null || g?.weaponry.pilotDps != null ? `${nf(g?.weaponry.pilotGuns)} · ${nf(g?.weaponry.pilotDps)}` : "—"], ["Tourelles habitées / télécommandées", g?.weaponry.mannedTurrets != null ? `${nf(g.weaponry.mannedTurrets)} / ${nf(g.weaponry.remoteTurrets)}` : "—"], ["DPS des tourelles", nf(g?.weaponry.turretDps)], ["Missiles", g?.weaponry.missiles != null ? `${nf(g.weaponry.missiles)}${g.weaponry.missileDamage ? ` · ${nf(g.weaponry.missileDamage)} dégâts au total` : ""}` : "—"], ["Contre-mesures", nf(g?.weaponry.countermeasures)]]} />
                     <div className="spec-block" style={{ gridColumn: "1 / -1" }}>
                       <div className="label">DESCRIPTION</div>
-                      <div style={{ lineHeight: 1.6, color: "var(--text)", marginTop: 8 }}>{descFr === undefined ? <span className="mono" style={{ color: "var(--dim)", fontSize: 11 }}>CHARGEMENT…</span> : (descFr ?? sel.desc ?? "—")}</div>
+                      <div style={{ lineHeight: 1.6, color: "var(--text)", marginTop: 8 }}>{game === undefined ? <span className="mono" style={{ color: "var(--dim)", fontSize: 11 }}>CHARGEMENT…</span> : (g?.descFr ?? sel.desc ?? "—")}</div>
                     </div>
                   </div>
                 )}
@@ -332,7 +340,7 @@ export function HangarPage() {
                     {sel.loaners.length > 0 && <Spec title="PRÊTÉS EN ATTENDANT (LOANERS)" rows={sel.loaners.map((l): [string, string] => [l, ""])} />}
                   </div>
                 )}
-                <div className="hint" style={{ margin: 0 }}>Données FleetYards extraites des fichiers du jeu (Alpha en cours) ; prix en jeu relevés par la communauté. Modèles 3D et images © Cloud Imperium Games.</div>
+                <div className="hint" style={{ margin: 0 }}>Chiffres extraits des fichiers du jeu{g?.version ? ` (version ${g.version})` : ""} par FleetYards et le wiki Star Citizen ; prix en jeu relevés par la communauté. Modèles 3D et images © Cloud Imperium Games.</div>
               </div>
             </div>
           </div>
