@@ -5,6 +5,7 @@ import { Pic } from "../../components/Pic";
 import { SHIPS as ART } from "../../lib/images";
 import { isTauri, loadStore, pickFile, readTextFile } from "../../lib/tauri";
 import type { AppSettings } from "../settings/defaults";
+import { loadUsdEur, usdToEurTtc, type Fx } from "../../lib/fx";
 import { GROUP_FR, loadCatalog, loadGameSheet, loadShipDetail, loadShipFittings, type Fitting, type GameSheet, type Ship, type ShipDetail, type ShipFittings } from "./catalog";
 import { ACQUIRED_FR, INSURANCE_FR, activeFleet, addShip, costUsd, emptyHangar, exportFleet, importHangarXplor, loadHangar, newFleet, parseFleetFile, saveHangar, updateFleet, type Acquired, type Hangar, type Insurance, type OwnedShip } from "./hangar";
 import { ShipViewer } from "./ShipViewer";
@@ -54,6 +55,8 @@ export function HangarPage() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [catError, setCatError] = useState<string | null>(null);
+  const [fx, setFx] = useState<Fx>({ rate: 0.92, at: null, source: "secours" });
+  useEffect(() => { let alive = true; loadUsdEur().then((r) => { if (alive) setFx(r); }); return () => { alive = false; }; }, []);
   const [catPartial, setCatPartial] = useState<string | null>(null);
   const [catAt, setCatAt] = useState<number | null>(null);
   const refreshCatalog = (force: boolean) => {
@@ -139,8 +142,13 @@ export function HangarPage() {
     const ships = owned.map((o) => (o.shipId ? byId.get(o.shipId) : undefined));
     return {
       n: owned.length,
-      usd: owned.reduce((a, o) => a + costUsd(o.pledgeCost), 0),
-      auec: owned.reduce((a, o) => a + (o.paidAuec ?? 0), 0),
+      // valeur boutique : le prix réellement payé (import HangarXPLOR) quand on le connaît, sinon le prix catalogue RSI
+      usd: owned.reduce((a, o, i) => a + (costUsd(o.pledgeCost) || ships[i]?.pledge || 0), 0),
+      noUsd: owned.filter((o, i) => !(costUsd(o.pledgeCost) || ships[i]?.pledge)).length,
+      // valeur en jeu : prix d'achat le plus bas relevé en boutique (aUEC)
+      auec: ships.reduce((a, s) => a + (s?.priceAuec ?? 0), 0),
+      noAuec: ships.filter((s) => !s?.priceAuec).length,
+      paid: owned.reduce((a, o) => a + (o.paidAuec ?? 0), 0),
       cargo: ships.reduce((a, s) => a + (s?.cargo ?? 0), 0),
       crew: ships.reduce((a, s) => a + (s?.crewMax ?? 0), 0),
       inGame: ships.filter((s) => s?.inGame).length,
@@ -223,7 +231,14 @@ export function HangarPage() {
             <Stat label="JOUABLES" value={`${totals.inGame} / ${totals.n}`} />
             <Stat label="CARGO CUMULÉ" value={unit(totals.cargo, "SCU")} />
             <Stat label="ÉQUIPAGE MAX" value={totals.crew} />
-            <Stat label="VALEUR" value={[totals.usd ? `${nf(totals.usd)} $` : "", totals.auec ? `${nf(totals.auec)} aUEC` : ""].filter(Boolean).join(" · ") || "—"} amber />
+            <Stat label="VALEUR BOUTIQUE RSI" value={totals.usd ? `${nf(Math.round(totals.usd))} $ · ≈ ${nf(Math.round(usdToEurTtc(totals.usd, fx.rate)))} €` : "—"} amber />
+            <Stat label="VALEUR EN JEU" value={totals.auec ? `${nf(totals.auec)} aUEC` : "—"} amber />
+          </div>
+          <div className="hint" style={{ marginTop: -6 }}>
+            Valeur boutique : prix catalogue RSI en dollars hors taxes (ou le prix payé, si importé de HangarXPLOR){totals.noUsd > 0 ? `, ${totals.noUsd} vaisseau(x) sans prix connu` : ""}.
+            {" "}L'euro est une estimation TTC (taux {fx.rate.toFixed(3)} {fx.source === "bce" ? "de la BCE" : fx.source === "cache" ? "du dernier relevé" : "approximatif, hors ligne"} + TVA 20 %) : le prix réel de la boutique RSI peut différer de quelques euros.
+            {" "}Valeur en jeu : meilleur prix d'achat relevé (UEX){totals.noAuec > 0 ? `, ${totals.noAuec} vaisseau(x) non vendu(s) en jeu non compté(s)` : ""}.
+            {totals.paid > 0 ? ` Tu as noté ${nf(totals.paid)} aUEC réellement payés.` : ""}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))", gap: 16 }}>
             {owned.map((o) => {
@@ -237,6 +252,12 @@ export function HangarPage() {
                     </Pic>
                   </button>
                   <div className="img-body">
+                    {s && (s.pledge != null || s.priceAuec) && (
+                      <div className="mono" style={{ fontSize: 12, color: "var(--text-bright)", display: "flex", flexWrap: "wrap", gap: "2px 10px" }}>
+                        {s.pledge != null && <span title="Prix catalogue de la boutique RSI, et son équivalent estimé en euros TTC">{nf(s.pledge)} $ · ≈ {nf(Math.round(usdToEurTtc(s.pledge, fx.rate)))} €</span>}
+                        <span style={{ color: s.priceAuec ? "var(--amber)" : "var(--dim)" }}>{s.priceAuec ? `${nf(s.priceAuec)} aUEC` : "non vendu en jeu"}</span>
+                      </div>
+                    )}
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                       {o.nickname && <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>{o.label}</span>}
                       {(o.insurance || o.lti) && <span className="hud-chip" style={{ color: o.insurance === "lti" || o.lti ? "var(--green)" : "var(--text)" }}>{o.insurance === "lti" || (!o.insurance && o.lti) ? "LTI" : INSURANCE_FR[o.insurance ?? ""].toUpperCase()}</span>}
@@ -344,7 +365,7 @@ export function HangarPage() {
 
                 {tab === "buy" && (
                   <div className="spec-cols">
-                    <Spec title="PRIX" rows={[["Pledge (boutique RSI)", sel.pledge != null ? `${nf(sel.pledge)} $` : "—"], ["En jeu", sel.priceAuec ? `${nf(sel.priceAuec)} aUEC` : "Non vendu en jeu"]]} />
+                    <Spec title="PRIX" rows={[["Pledge (boutique RSI)", sel.pledge != null ? `${nf(sel.pledge)} $` : "—"], ["Estimation en euros TTC", sel.pledge != null ? `≈ ${nf(Math.round(usdToEurTtc(sel.pledge, fx.rate)))} €` : "—"], ["En jeu", sel.priceAuec ? `${nf(sel.priceAuec)} aUEC` : "Non vendu en jeu"]]} />
                     <Spec title={`OÙ L'ACHETER EN JEU (${sel.soldAt.length})`} rows={sel.soldAt.length ? sel.soldAt.map((x): [string, string] => [`${x.name}${x.where ? ` · ${x.where}` : ""}`, `${nf(x.price)} aUEC`]) : [["Aucun vendeur connu", "—"]]} />
                     <Spec title={`LOCATION À LA JOURNÉE (${sel.rentAt.length})`} rows={sel.rentAt.length ? sel.rentAt.map((x): [string, string] => [`${x.name}${x.where ? ` · ${x.where}` : ""}`, `${nf(x.price)} aUEC`]) : [["Pas de location connue", "—"]]} />
                     {sel.loaners.length > 0 && <Spec title="PRÊTÉS EN ATTENDANT (LOANERS)" rows={sel.loaners.map((l): [string, string] => [l, ""])} />}
