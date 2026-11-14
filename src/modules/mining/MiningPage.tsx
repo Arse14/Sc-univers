@@ -2,6 +2,7 @@ import { useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
 import { HEADS, FAMILIES, SHIPS, DATA_VERSION, type HeadSize } from "./heads";
 import { Pic } from "../../components/Pic";
+import { MiningShopView } from "./ShopView";
 import { MINING_HEADS, MINING_HEAD_SHIP_FALLBACK, MINING_SHIPS, SHIPS as SHIP_ART } from "../../lib/images";
 
 const fmt = (v: number | null) => (v === null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)} %`);
@@ -20,7 +21,7 @@ export function MiningPage() {
 
   return (
     <>
-      <PageHeader crumb="INDUSTRIE ▸ MINAGE" title="Têtes de minage" sub="Comparatif des lasers de minage : taille, avantages, inconvénients, vaisseaux compatibles."
+      <PageHeader crumb="INDUSTRIE ▸ MINAGE" title="Minage" sub="Têtes, modules, gadgets et minage au sol : comparatif, prix et lieux d'achat dans Stanton, Pyro et Nyx."
         banner={{ src: SHIP_ART.orionMining, kicker: "MINAGE ▸ LASERS ET TÊTES", text: "Une tête de minage se choisit selon la roche : résistance, instabilité, fenêtre de charge. Sélectionne une tête dans le comparatif pour voir son rendu en jeu et ses forces." }} />
       <Note tag="⚠ DONNÉES COMMUNAUTAIRES">Valeurs issues de bases communautaires (synchronisées avec UEX), relevées sur l'{DATA_VERSION}. À revérifier après chaque patch.</Note>
 
@@ -122,6 +123,9 @@ export function MiningPage() {
           </div>
         </div>
       </section>
+
+      <SectionHead n="03" title="ACHETER LE MATÉRIEL ▸ PRIX ET LIEUX" />
+      <MiningShopView />
     </>
   );
 }
