@@ -13,44 +13,12 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { isTauri, loadStore, saveStore } from "../../lib/tauri";
 
-export interface Ship {
-  id: string;
-  sc: string | null;          // scIdentifier (orig_100i)
-  name: string;               // 100i
-  rsiName: string;            // nom RSI complet
-  slug: string;
-  mfr: string;                // Origin Jumpworks
-  mfrCode: string;            // ORIG
-  cls: string;                // classification (Multi, Combat…)
-  foci: string[];
-  size: string;               // small/medium/large/capital…
-  sizeLabel: string;
-  status: string;             // flight-ready / in-production / in-concept
-  inGame: boolean;
-  crewMin: number | null; crewMax: number | null;
-  cargo: number | null;
-  length: number | null; beam: number | null; height: number | null;
-  mass: number | null;
-  hull: number | null;
-  scm: number | null; max: number | null;
-  dps: number | null;         // DPS en rafale
-  pledge: number | null;      // $
-  priceAuec: number | null;
-  soldAt: { name: string; where: string; price: number }[];
-  rentAt: { name: string; where: string; price: number }[];
-  onSale: boolean;
-  img: string | null;         // image boutique, moyenne
-  imgLarge: string | null;
-  desc: string;
-  storeUrl: string | null;
-  loaners: string[];
-  has3d: boolean;
-}
+import { FY_API, fetchCatalog, listOf, type Ship } from "./catalog-core";
+export type { Ship } from "./catalog-core";
 
-const API = "https://api.fleetyards.net/v1";
+const API = FY_API;
 const TTL = 7 * 24 * 3600 * 1000;
-const CATALOG_KEY = "hangar-catalog-v3";
-const PAGE = 40;
+const CATALOG_KEY = "hangar-catalog-v4";
 
 async function getJson<T>(url: string): Promise<T> {
   const f = isTauri ? tauriFetch : fetch;
@@ -61,91 +29,44 @@ async function getJson<T>(url: string): Promise<T> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Any = any;
-/**
- * FleetYards a changé l'enveloppe de ses listes : autrefois un tableau nu,
- * désormais { items: [...], meta: { pagination } }. On accepte les deux.
- */
-function listOf(data: Any): { items: Any[]; pages: number | null } {
-  if (Array.isArray(data)) return { items: data, pages: null };
-  const items = Array.isArray(data?.items) ? data.items : Array.isArray(data?.data) ? data.data : [];
-  const pages = typeof data?.meta?.pagination?.totalPages === "number" ? data.meta.pagination.totalPages : null;
-  return { items, pages };
-}
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
-
-/** « Teasa Spaceport, Lorville » à partir de la boutique FleetYards. */
-function place(x: Any): string {
-  const loc = x?.shop?.location;
-  const parts = [loc?.name, loc?.parentName].filter((v: unknown) => typeof v === "string" && v);
-  if (parts.length) return parts.join(", ");
-  return typeof x?.location === "string" ? x.location.replace(`${x?.shop?.name ?? ""} - `, "") : "";
-}
-
-/** Boutiques triées par prix ; pour la location on ne garde que le tarif à la journée. */
-function shops(list: Any[], rental: boolean): { name: string; where: string; price: number }[] {
-  const out: { name: string; where: string; price: number }[] = [];
-  const seen = new Set<string>();
-  for (const x of list ?? []) {
-    if (rental && x?.timeRange && x.timeRange !== "1-day") continue;
-    const price = typeof x?.price === "number" ? x.price : 0;
-    const row = { name: x?.shop?.name ?? "?", where: place(x), price };
-    const k = `${row.name}|${row.where}|${row.price}`;
-    if (seen.has(k)) continue;
-    seen.add(k); out.push(row);
-  }
-  out.sort((a, b) => a.price - b.price);
-  return out.slice(0, 14);
-}
-
-function compact(m: Any): Ship {
-  const met = m.metrics ?? {};
-  const med = m.media ?? {};
-  const av = m.availability ?? {};
-  const sp = m.speeds ?? met.speeds ?? {};
-  return {
-    id: m.id, sc: m.scIdentifier ?? null, name: m.name, rsiName: m.rsiName ?? m.name, slug: m.slug,
-    mfr: m.manufacturer?.name ?? "", mfrCode: m.manufacturer?.code ?? "",
-    cls: m.classificationLabel ?? m.classification ?? "", foci: m.fociLabels ?? [], size: met.size ?? m.size ?? "", sizeLabel: met.sizeLabel ?? m.sizeLabel ?? "",
-    status: m.productionStatus ?? "", inGame: !!m.inGame,
-    crewMin: num(m.crew?.min) ?? num(m.crew?.value), crewMax: num(m.crew?.max) ?? num(m.crew?.value),
-    cargo: num(met.cargo), length: num(met.length), beam: num(met.beam), height: num(met.height), mass: num(met.mass), hull: num(met.hullHealth),
-    scm: num(sp.scmSpeed), max: num(sp.maxSpeed), dps: num(m.burstDps) ?? num(met.burstDps),
-    pledge: num(m.pledgePrice), priceAuec: num(m.price),
-    soldAt: shops(av.soldAt, false),
-    rentAt: shops(av.rentalAt, true),
-    onSale: !!m.onSale,
-    img: med.storeImage?.mediumUrl ?? med.angledView?.mediumUrl ?? null,
-    imgLarge: med.storeImage?.largeUrl ?? med.storeImage?.url ?? null,
-    desc: typeof m.description === "string" ? m.description.slice(0, 900) : "", storeUrl: m.links?.storeUrl ?? null,
-    loaners: (m.loaners ?? []).map((l: Any) => l?.name ?? l).filter((x: unknown) => typeof x === "string"),
-    has3d: !!(m.holo || med.holo || med.holoLite || med.holoTextured || med.holoTexturedLite),
-  };
-}
 
 interface Cache { at: number; ships: Ship[] }
 
-/** Catalogue condensé. `onProgress` reçoit le nombre de modèles déjà reçus. */
-export async function loadCatalog(force = false, onProgress?: (n: number) => void): Promise<{ ships: Ship[]; source: "api" | "cache" | "none"; at: number | null; error?: string }> {
-  const c = await loadStore<Cache>(CATALOG_KEY).catch(() => null);
-  if (!force && c && Date.now() - c.at < TTL && c.ships.length > 50) return { ships: c.ships, source: "cache", at: c.at };
+export type CatalogSource = "api" | "cache" | "bundled" | "none";
+export interface CatalogResult { ships: Ship[]; source: CatalogSource; at: number | null; error?: string; partial?: string }
+
+/** Copie embarquée dans l'application à la compilation (vide dans une compilation locale). */
+async function bundled(): Promise<Cache | null> {
   try {
-    const ships: Ship[] = [];
-    // Petites pages : chaque modèle pèse ≈ 100 Ko en JSON brut, on ne veut pas 20 Mo en mémoire d'un coup.
-    for (let page = 1; page <= 30; page++) {
-      const { items, pages } = listOf(await getJson<Any>(`${API}/models?perPage=${PAGE}&page=${page}`));
-      if (items.length === 0) break;
-      for (const m of items) ships.push(compact(m));
-      onProgress?.(ships.length);
-      if (pages != null ? page >= pages : items.length < PAGE) break;
-    }
-    if (ships.length < 50) throw new Error("catalogue incomplet");
-    ships.sort((a, b) => a.mfr.localeCompare(b.mfr) || a.name.localeCompare(b.name));
+    const m = (await import("./snapshot.json")) as unknown as { default: Cache };
+    const snap = m.default;
+    return snap && Array.isArray(snap.ships) && snap.ships.length > 50 ? snap : null;
+  } catch { return null; }
+}
+
+/**
+ * Catalogue condensé. Ordre : cache récent → sources en ligne (wiki + FleetYards
+ * fusionnés) → dernier cache quel que soit son âge → copie embarquée.
+ * `onProgress` reçoit le nombre de fiches déjà reçues.
+ */
+export async function loadCatalog(force = false, onProgress?: (n: number) => void): Promise<CatalogResult> {
+  const c = await loadStore<Cache>(CATALOG_KEY).catch(() => null);
+  const usable = c && Array.isArray(c.ships) && c.ships.length > 50 ? c : null;
+  if (!force && usable && Date.now() - usable.at < TTL) return { ships: usable.ships, source: "cache", at: usable.at };
+  try {
+    const r = await fetchCatalog((u) => getJson<unknown>(u), onProgress);
+    // une seule source a répondu alors qu'on avait un catalogue complet : on le garde plutôt que de l'appauvrir
+    if (usable && !(r.wiki && r.fy) && Date.now() - usable.at < 4 * TTL) return { ships: usable.ships, source: "cache", at: usable.at, partial: r.errors.join(" · ") };
     const at = Date.now();
-    await saveStore<Cache>(CATALOG_KEY, { at, ships }).catch(() => undefined);
-    return { ships, source: "api", at };
+    await saveStore<Cache>(CATALOG_KEY, { at, ships: r.ships }).catch(() => undefined);
+    return { ships: r.ships, source: "api", at, partial: r.wiki && r.fy ? undefined : `${r.wiki ? "FleetYards" : "le wiki"} n'a pas répondu (${r.errors.join(" · ")})` };
   } catch (e) {
-    if (c) return { ships: c.ships, source: "cache", at: c.at };
-    return { ships: [], source: "none", at: null, error: e instanceof Error ? e.message : String(e) };
+    const error = e instanceof Error ? e.message : String(e);
+    if (usable) return { ships: usable.ships, source: "cache", at: usable.at, error };
+    const snap = await bundled();
+    if (snap) return { ships: snap.ships, source: "bundled", at: snap.at, error };
+    return { ships: [], source: "none", at: null, error };
   }
 }
 
@@ -359,13 +280,13 @@ const sheetMem = new Map<string, GameSheet>();
  * saut quantique, signatures, assurance. La réponse brute pèse ≈ 400 Ko, on
  * n'en garde que ces champs. Recherche par identifiant puis par nom.
  */
-export async function loadGameSheet(slug: string, rsiName: string): Promise<GameSheet | null> {
+export async function loadGameSheet(slug: string, rsiName: string, wikiSlug?: string): Promise<GameSheet | null> {
   const hit = sheetMem.get(slug);
   if (hit) return hit;
   const key = `hangar-game-${slug}`;
   const c = await loadStore<GameSheet>(key).catch(() => null);
   if (c && Date.now() - c.at < TTL) { remember(sheetMem, slug, c); return c; }
-  for (const id of [slug, rsiName]) {
+  for (const id of [...new Set([wikiSlug, slug, rsiName].filter((v): v is string => !!v))]) {
     try {
       const res = await getJson<{ data: Any }>(`https://api.star-citizen.wiki/api/v2/vehicles/${encodeURIComponent(id)}`);
       if (!res?.data?.name) continue;

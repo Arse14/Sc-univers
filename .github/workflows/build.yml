@@ -43,6 +43,12 @@ jobs:
 
       - run: npm ci
 
+      # Copie embarquée du catalogue des vaisseaux : si le wiki et FleetYards
+      # sont un jour injoignables, le Hangar de l'app reste utilisable.
+      - name: Copie embarquée du catalogue
+        continue-on-error: true
+        run: node scripts/snapshot-catalog.ts
+
       - name: Version depuis le tag
         if: ${{ env.RELEASE_TAG != '' }}
         shell: pwsh

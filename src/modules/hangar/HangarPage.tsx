@@ -54,9 +54,11 @@ export function HangarPage() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [catError, setCatError] = useState<string | null>(null);
+  const [catPartial, setCatPartial] = useState<string | null>(null);
+  const [catAt, setCatAt] = useState<number | null>(null);
   const refreshCatalog = (force: boolean) => {
     setLoadingCat(true); setProgress(0);
-    loadCatalog(force, setProgress).then((r) => { setCatalog(r.ships); setCatSource(r.source); setCatError(r.error ?? null); }).finally(() => setLoadingCat(false));
+    loadCatalog(force, setProgress).then((r) => { setCatalog(r.ships); setCatSource(r.source); setCatError(r.error ?? null); setCatPartial(r.partial ?? null); setCatAt(r.at); }).finally(() => setLoadingCat(false));
   };
   useEffect(() => {
     loadHangar().then(setHangar).catch(() => undefined);
@@ -64,7 +66,8 @@ export function HangarPage() {
     refreshCatalog(false);
   }, []);
 
-  const byId = useMemo(() => new Map(catalog.map((s) => [s.id, s])), [catalog]);
+  // les flottes enregistrées avant la fusion des sources portent l'ancien identifiant FleetYards (s.alt)
+  const byId = useMemo(() => { const m = new Map<string, Ship>(); for (const s of catalog) { m.set(s.id, s); for (const a of s.alt ?? []) if (!m.has(a)) m.set(a, s); } return m; }, [catalog]);
   const persist = async (h: Hangar) => { setHangar(h); await saveHangar(h).catch(() => undefined); };
   const fleet = activeFleet(hangar);
   const owned = fleet.ships;
@@ -76,7 +79,7 @@ export function HangarPage() {
     if (!s) return;
     loadShipDetail(s.slug).then((d) => setDetail((cur) => (cur === "loading" ? d : cur)));
     const slug = s.slug;
-    loadGameSheet(slug, s.rsiName).then((g) => setGame((cur) => (cur === undefined ? (g && g.slug === slug ? g : null) : cur)));
+    loadGameSheet(slug, s.rsiName, s.wikiSlug).then((g) => setGame((cur) => (cur === undefined ? (g && g.slug === slug ? g : null) : cur)));
     requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
   useEffect(() => {
@@ -160,14 +163,20 @@ export function HangarPage() {
   return (
     <>
       <PageHeader crumb="UNIVERS ▸ HANGAR" title="Hangar"
-        sub={<>{hangar.fleets.length} FLOTTE{hangar.fleets.length > 1 ? "S" : ""} · {hangar.fleets.reduce((a, f) => a + f.ships.length, 0)} VAISSEAUX &nbsp;·&nbsp; CATALOGUE {loadingCat ? `CHARGEMENT ${progress || ""}…` : `${catalog.length} MODÈLES`}{!loadingCat && catSource && ` (${catSource === "api" ? "À JOUR" : catSource === "cache" ? "CACHE LOCAL" : "INDISPONIBLE"})`}</>}
+        sub={<>{hangar.fleets.length} FLOTTE{hangar.fleets.length > 1 ? "S" : ""} · {hangar.fleets.reduce((a, f) => a + f.ships.length, 0)} VAISSEAUX &nbsp;·&nbsp; CATALOGUE {loadingCat ? `CHARGEMENT ${progress || ""}…` : `${catalog.length} MODÈLES`}{!loadingCat && catSource && ` (${catSource === "api" ? "À JOUR" : catSource === "cache" ? "CACHE LOCAL" : catSource === "bundled" ? "COPIE EMBARQUÉE" : "INDISPONIBLE"})`}</>}
         actions={<>
           <button type="button" className="btn" onClick={() => refreshCatalog(true)} disabled={loadingCat}>{loadingCat ? "Chargement…" : "Actualiser le catalogue"}</button>
           <button type="button" className="btn primary" onClick={() => { searchRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); searchRef.current?.focus(); }} disabled={catalog.length === 0}>+ Ajouter un vaisseau</button>
         </>}
         banner={{ src: ART.andromeda, kicker: "HANGAR ▸ FLOTTES, FICHES TECHNIQUES ET MODÈLES 3D", text: "Compose tes flottes depuis le catalogue, ouvre la fiche complète de chaque vaisseau et tourne autour de son modèle 3D. Tout se gère ici, sans extension ni site externe." }} />
 
-      {catSource === "none" && !loadingCat && <Note tag="⚠ CATALOGUE">Impossible de joindre le catalogue (FleetYards). Vérifie la connexion puis « Actualiser le catalogue ». Tes flottes restent disponibles.</Note>}
+      {catSource === "none" && !loadingCat && <Note tag="⚠ CATALOGUE">Impossible de joindre le catalogue (wiki Star Citizen et FleetYards). Vérifie la connexion puis « Actualiser le catalogue ». Tes flottes restent disponibles.</Note>}
+      {!loadingCat && catalog.length > 0 && (catSource === "bundled" || (catSource === "cache" && catError)) && (
+        <Note tag="CATALOGUE HORS LIGNE" info>
+          Les sources en ligne ne répondent pas{catError ? ` (${catError})` : ""} : l'appli affiche {catSource === "bundled" ? "la copie livrée avec cette version" : "la dernière liste reçue"}{catAt ? `, datée du ${new Date(catAt).toLocaleDateString("fr-FR")}` : ""}. Les prix peuvent avoir changé ; la 3D demande une connexion à FleetYards.
+        </Note>
+      )}
+      {!loadingCat && catPartial && catSource === "api" && <Note tag="CATALOGUE PARTIEL" info>Une des deux sources manque : {catPartial}. Les fiches restent consultables ; images boutique ou modèles 3D peuvent manquer jusqu'à la prochaine actualisation.</Note>}
       {msg && <Note tag={msg.kind === "ok" ? "✓" : "⚠"} info={msg.kind === "ok"}>{msg.text}</Note>}
 
       {/* ===== 01 flottes ===== */}
@@ -365,7 +374,7 @@ export function HangarPage() {
         <div className="panel empty">
           {loadingCat ? `Chargement du catalogue… ${progress ? `${progress} modèles reçus` : ""}` : (
             <>
-              <div>Catalogue indisponible : FleetYards n'a pas répondu comme attendu{catError ? ` (${catError})` : ""}.</div>
+              <div>Catalogue indisponible : ni le wiki ni FleetYards n'ont répondu{catError ? ` (${catError})` : ""}.</div>
               <button type="button" className="btn sm" style={{ marginTop: 12 }} onClick={() => refreshCatalog(true)}>Réessayer</button>
             </>
           )}
@@ -395,7 +404,7 @@ export function HangarPage() {
           {results.length > limit && <button type="button" className="btn" style={{ alignSelf: "center" }} onClick={() => setLimit((n) => n + PAGE_SIZE)}>Afficher {Math.min(PAGE_SIZE, results.length - limit)} de plus ({results.length - limit} restants)</button>}
         </>
       )}
-      <div className="hint">Catalogue et modèles : FleetYards (fleetyards.net). Descriptions françaises : wiki Star Citizen. SC-Univers n'est pas affilié à Cloud Imperium Games.</div>
+      <div className="hint">Fiches techniques : wiki Star Citizen (fichiers du jeu, prix UEX). Images boutique et modèles 3D : FleetYards (fleetyards.net). SC-Univers n'est pas affilié à Cloud Imperium Games.</div>
     </>
   );
 }
