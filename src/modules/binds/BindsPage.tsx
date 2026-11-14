@@ -9,7 +9,7 @@ import { useGamepadDetect } from "./useGamepad";
 import { ActionPicker } from "./ActionPicker";
 import type { ScAction } from "./actions";
 import { assign, diff, diffCount, isAxisInput, mappingPathFor, toMappingXml, unassign } from "./profile";
-import { CATALOG, KIND_FR, catalogDevice, catalogEntryOf, catalogId, isCatalogId } from "./catalog";
+import { CATALOG, catalogDevice, catalogEntryOf, catalogId, isCatalogId } from "./catalog";
 import { SAMPLE_X56_PR0 } from "./samplePr0";
 import { DeviceView } from "./DeviceView";
 import { Device3D, type Anchor3D } from "./three/Device3D";
@@ -22,8 +22,24 @@ interface BindsStore {
   devices: Record<string, DeviceConfig>;
   /** Binds en cours d'édition dans l'application (null = ceux du jeu, non modifiés). */
   custom?: ScBinding[] | null;
-  /** Appareils ajoutés depuis le catalogue intégré (« cat:<clé>#<n> »). */
-  extra?: string[];
+  /** Matériel choisi : « pr0 » (X56 intégré ou profil importé), « none », ou une clé du catalogue. */
+  setup?: Setup;
+}
+interface Setup { stick: string; throttle: string; stick2: string }
+const DEFAULT_SETUP: Setup = { stick: "pr0", throttle: "pr0", stick2: "none" };
+const isThrottleDev = (d: Device) => /throttle|gaz/i.test(d.name);
+
+/** Liste des appareils affichés pour un choix de matériel donné. */
+function devicesFor(profile: Device[], s: Setup): Device[] {
+  const out: Device[] = [];
+  const cat = (key: string, n: number) => { const d = catalogDevice(catalogId(key, n)); if (d) out.push(d); };
+  const pStick = profile.find((d) => !isThrottleDev(d)), pThr = profile.find(isThrottleDev);
+  if (s.stick === "pr0") { if (pStick) out.push(pStick); } else if (s.stick !== "none") cat(s.stick, 1);
+  if (s.throttle === "pr0") { if (pThr) out.push(pThr); } else if (s.throttle !== "none") cat(s.throttle, 1);
+  if (s.stick2 !== "none") cat(s.stick2, s.stick2 === s.stick ? 2 : 1);
+  // un profil importé peut contenir d'autres appareils : on les garde tant qu'on reste sur le profil
+  if (s.stick === "pr0" && s.throttle === "pr0") for (const d of profile) if (!out.includes(d)) out.push(d);
+  return out;
 }
 
 const EMPTY_STORE: BindsStore = { profilePath: null, actionmapsPath: null, devices: {} };
@@ -54,7 +70,6 @@ export function BindsPage() {
   const [exported, setExported] = useState<string | null>(null);
   const { hit, pads, reset: resetHit } = useGamepadDetect(detecting);
   const profileDevs = useRef<Device[]>([]);
-  const [toAdd, setToAdd] = useState(CATALOG[0].key);
 
   // ----- chargement initial -----
   useEffect(() => {
@@ -82,12 +97,12 @@ export function BindsPage() {
     const devs = parsePr0(text);
     if (devs.length === 0) throw new Error("Aucun appareil trouvé dans ce profil.");
     profileDevs.current = devs;
-    const extra = (base.extra ?? []).map(catalogDevice).filter((d): d is Device => !!d);
-    setDevices([...devs, ...extra]);
-    setDevId(devs[0].id);
-    setSelId(devs[0].controls[0]?.id ?? null);
+    const shown = devicesFor(devs, base.setup ?? DEFAULT_SETUP);
+    setDevices(shown);
+    setDevId(shown[0]?.id ?? null);
+    setSelId(shown[0]?.controls[0]?.id ?? null);
     const cfg = { ...base.devices };
-    [...devs, ...extra].forEach((d, i) => { if (!cfg[d.id]) cfg[d.id] = defaultConfig(i); });
+    shown.forEach((d, i) => { if (!cfg[d.id]) cfg[d.id] = defaultConfig(i); });
     await persist({ ...base, profilePath: path, devices: cfg });
     // images déjà importées
     for (const d of devs) {
@@ -98,23 +113,20 @@ export function BindsPage() {
     }
   }
 
-  /** Ajoute un appareil du catalogue (deux fois le même = double manche). */
-  async function addCatalog(key: string) {
-    const used = new Set(store.extra ?? []);
-    let n = 1; while (used.has(catalogId(key, n))) n++;
-    const id = catalogId(key, n);
-    const dev = catalogDevice(id); if (!dev) return;
-    const all = [...devices, dev];
-    const slots = new Set(devices.map((d) => store.devices[d.id]?.jsSlot));
-    let slot = 1; while (slots.has(slot) && slot < 8) slot++;
-    setDevices(all); setDevId(id); setSelId(dev.controls[0]?.id ?? null);
-    await persist({ ...store, extra: [...(store.extra ?? []), id], devices: { ...store.devices, [id]: { ...defaultConfig(0), jsSlot: slot } } });
-  }
-  async function removeCatalog(id: string) {
-    const rest = devices.filter((d) => d.id !== id);
-    setDevices(rest); setDevId(rest[0]?.id ?? null); setSelId(rest[0]?.controls[0]?.id ?? null);
-    const cfg = { ...store.devices }; delete cfg[id];
-    await persist({ ...store, extra: (store.extra ?? []).filter((x) => x !== id), devices: cfg });
+  /** Change le manche, la manette des gaz ou le second manche. */
+  async function changeSetup(patch: Partial<Setup>) {
+    const next: Setup = { ...(store.setup ?? DEFAULT_SETUP), ...patch };
+    // un ensemble manche + gaz (un seul appareil USB) remplace aussi la manette des gaz
+    if (patch.stick && CATALOG.find((e) => e.key === patch.stick)?.kind === "hotas") next.throttle = "none";
+    const shown = devicesFor(profileDevs.current, next);
+    const cfg = { ...store.devices };
+    // les slots js suivent l'ordre affiché (manche, gaz, second manche) ; ils restent réglables ensuite
+    shown.forEach((d, i) => { cfg[d.id] = { ...(cfg[d.id] ?? defaultConfig(i)), jsSlot: i + 1 }; });
+    setDevices(shown);
+    const focus = patch.stick !== undefined ? shown[0] : patch.throttle !== undefined ? shown.find((d) => isThrottleDev(d) || catalogEntryOf(d.id)?.kind === "throttle") : shown[shown.length - 1];
+    const d = focus ?? shown[0];
+    setDevId(d?.id ?? null); setSelId(d?.controls[0]?.id ?? null);
+    await persist({ ...store, setup: next, devices: cfg });
   }
 
   async function loadActionmaps(path: string) {
@@ -212,6 +224,13 @@ export function BindsPage() {
 
   // ----- données dérivées -----
   const device = devices.find((d) => d.id === devId) ?? null;
+  const setup = store.setup ?? DEFAULT_SETUP;
+  const pr0Label = store.profilePath && store.profilePath !== "sample:x56" ? "Profil .pr0 importé" : "Logitech X56 (intégré)";
+  const catGroups = (kinds: string[]) => [...new Set(CATALOG.filter((e) => kinds.includes(e.kind)).map((e) => e.brand))].map((b) => (
+    <optgroup key={b} label={b}>
+      {CATALOG.filter((e) => e.brand === b && kinds.includes(e.kind)).map((e) => <option key={e.key} value={e.key}>{e.brand} {e.name}{e.kind === "hotas" ? " — manche + gaz" : ""}</option>)}
+    </optgroup>
+  ));
   const cfg = device ? store.devices[device.id] ?? defaultConfig(0) : null;
   const js = cfg?.jsSlot ?? 1;
   const has3d = !!device && (!!models[device.id] || !!buildDeviceModel(device.name));
@@ -320,22 +339,32 @@ export function BindsPage() {
           </div>
 
           <div className="panel small" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
-            <label className="field" style={{ flex: "1 1 260px", minWidth: 0 }}>
-              <span className="label">AJOUTER UN APPAREIL DU CATALOGUE</span>
-              <select value={toAdd} onChange={(e) => setToAdd(e.target.value)}>
-                {[...new Set(CATALOG.map((e) => e.brand))].map((b) => (
-                  <optgroup key={b} label={b}>
-                    {CATALOG.filter((e) => e.brand === b).map((e) => <option key={e.key} value={e.key}>{e.brand} {e.name} — {KIND_FR[e.kind]}</option>)}
-                  </optgroup>
-                ))}
+            <label className="field" style={{ flex: "1 1 240px", minWidth: 0 }}>
+              <span className="label">MANCHE (JOYSTICK)</span>
+              <select value={setup.stick} onChange={(e) => changeSetup({ stick: e.target.value })}>
+                <option value="pr0">{pr0Label}</option>
+                {catGroups(["stick", "hotas"])}
               </select>
             </label>
-            <button type="button" className="btn" onClick={() => addCatalog(toAdd)}>Ajouter</button>
-            {device && isCatalogId(device.id) && <button type="button" className="btn sm" onClick={() => removeCatalog(device.id)}>Retirer {device.name}</button>}
+            <label className="field" style={{ flex: "1 1 240px", minWidth: 0 }}>
+              <span className="label">MANETTE DES GAZ (THROTTLE)</span>
+              <select value={setup.throttle} onChange={(e) => changeSetup({ throttle: e.target.value })}>
+                <option value="pr0">{pr0Label}</option>
+                <option value="none">Aucune (ou comprise avec le manche)</option>
+                {catGroups(["throttle"])}
+              </select>
+            </label>
+            <label className="field" style={{ flex: "1 1 240px", minWidth: 0 }}>
+              <span className="label">SECOND MANCHE (DOUBLE STICK)</span>
+              <select value={setup.stick2} onChange={(e) => changeSetup({ stick2: e.target.value })}>
+                <option value="none">Aucun</option>
+                {catGroups(["stick"])}
+              </select>
+            </label>
             <div className="hint" style={{ flexBasis: "100%" }}>
               {device && isCatalogId(device.id)
-                ? <>{catalogEntryOf(device.id)?.sure ? "Numérotation d'usine relevée par la communauté." : "Numérotation indicative (cet appareil se reprogramme ou n'est pas documenté) : vérifie avec la détection de touche."} Modèle 3D schématique.</>
-                : <>Pas de X56 ? Ajoute ton manche et ta manette des gaz ici, sans profil constructeur. Ajouter deux fois le même manche donne un double manche (un slot js chacun).</>}
+                ? <>{device.name} : {catalogEntryOf(device.id)?.sure ? "numérotation d'usine relevée par la communauté." : "numérotation indicative (cet appareil se reprogramme ou n'est pas documenté), vérifie avec la détection de touche."} Modèle 3D schématique.</>
+                : <>Choisis ton matériel dans les listes : la vue 3D, la liste des commandes et l'export des touches suivent. Chaque appareil garde son slot js, réglable à droite des onglets.</>}
             </div>
           </div>
 
