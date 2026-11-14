@@ -114,179 +114,6 @@ function blackHat(r = 0.0105): THREE.Group {
   return g;
 }
 
-/** Hat POV : grande coupelle aluminium avec vis centrale. */
-function povHat(r = 0.0135): THREE.Group {
-  const g = new THREE.Group();
-  g.add(cyl(r, r * 0.92, 0.006, MAT.alu, 48));
-  g.add(mesh(new THREE.CylinderGeometry(r * 0.78, r * 0.86, 0.003, 48), MAT.alu, 0, 0.0045, 0));
-  g.add(mesh(new THREE.CylinderGeometry(r * 0.22, r * 0.22, 0.0015, 6), MAT.gunmetal, 0, 0.0065, 0));
-  return g;
-}
-
-// ───────────────────────────── MANCHE ─────────────────────────────
-
-export function buildStick(): THREE.Group {
-  const root = new THREE.Group();
-  root.name = "X56 Stick";
-
-  // --- Socle : 19 × 21 cm, plateau noir, bande avant avec plaque X-56 ---
-  const BW = 0.19, BD = 0.215, BH = 0.05;
-  root.add(at(rbox(BW, BH, BD, 0.012, MAT.body), 0, BH / 2, 0));
-  // plateau supérieur légèrement en retrait
-  root.add(at(rbox(BW - 0.006, 0.003, BD - 0.006, 0.01, MAT.panel), 0, BH + 0.0015, 0));
-  // bande avant (côté pilote) texturée + plaque aluminium "X-56"
-  root.add(mesh(new THREE.BoxGeometry(BW - 0.008, 0.0025, 0.048), MAT.plastic, 0, BH + 0.0035, BD / 2 - 0.03));
-  root.add(mesh(new THREE.BoxGeometry(0.105, 0.0012, 0.03), MAT.alu, 0, BH + 0.005, BD / 2 - 0.03));
-  root.add(mesh(new THREE.BoxGeometry(0.06, 0.0006, 0.009), MAT.gunmetal, -0.006, BH + 0.0059, BD / 2 - 0.034));
-  // boulons hexagonaux aux angles
-  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
-    root.add(mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.004, 6), MAT.alu, sx * (BW / 2 - 0.013), BH + 0.0045, sz * (BD / 2 - 0.013)));
-  });
-  // cadran gradué : deux arcs de traits gris (45°–135° à droite, 225°–315° à gauche)
-  const R1 = 0.068, R2 = 0.078;
-  const arcs: [number, number][] = [[Math.PI * 0.2, Math.PI * 0.8], [Math.PI * 1.2, Math.PI * 1.8]];
-  for (const [a0, a1] of arcs) {
-    const n = 22;
-    for (let i = 0; i <= n; i++) {
-      const a = a0 + ((a1 - a0) * i) / n;
-      const long = i % 11 === 0;
-      const len = long ? 0.014 : 0.008;
-      const rr = long ? R1 - 0.003 : R1;
-      const t = mesh(new THREE.BoxGeometry(0.0022, 0.0005, len), MAT.print, Math.sin(a) * (rr + len / 2), BH + 0.0035, Math.cos(a) * (rr + len / 2));
-      t.rotation.y = a;
-      root.add(t);
-    }
-    // arc fin extérieur
-    const arcMesh = mesh(new THREE.RingGeometry(R2, R2 + 0.0012, 48, 1, a0 - Math.PI / 2, a1 - a0), MAT.print, 0, BH + 0.0036, 0);
-    arcMesh.rotation.x = -Math.PI / 2; arcMesh.rotation.z = -Math.PI; arcMesh.scale.x = -1;
-    root.add(arcMesh);
-  }
-  // cuvette du cardan : noir brillant, bague à fentes, colonne
-  const GZ = -0.012;
-  root.add(mesh(new THREE.CylinderGeometry(0.058, 0.052, 0.006, 64), MAT.gloss, 0, BH + 0.004, GZ));
-  root.add(mesh(new THREE.TorusGeometry(0.046, 0.004, 12, 64), MAT.plastic, 0, BH + 0.008, GZ).rotateX(Math.PI / 2));
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2;
-    root.add(mesh(new THREE.BoxGeometry(0.004, 0.003, 0.012), MAT.body, Math.cos(a) * 0.046, BH + 0.009, GZ + Math.sin(a) * 0.046).rotateY(-a + Math.PI / 2));
-  }
-  root.add(mesh(new THREE.SphereGeometry(0.03, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), MAT.rubber, 0, BH + 0.004, GZ));
-  // colonne + soufflet nervuré + bague
-  root.add(mesh(new THREE.CylinderGeometry(0.014, 0.016, 0.05, 32), MAT.plastic, 0, BH + 0.03, GZ));
-  for (let i = 0; i < 5; i++) root.add(mesh(new THREE.TorusGeometry(0.0165, 0.0022, 10, 40), MAT.rubber, 0, BH + 0.02 + i * 0.006, GZ).rotateX(Math.PI / 2));
-  root.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.006, 40), MAT.gunmetal, 0, BH + 0.055, GZ));
-
-  // --- Poignée : repère local à la base de l'adaptateur de twist ---
-  const grip = new THREE.Group();
-  grip.position.set(0, BH + 0.058, GZ);
-  root.add(grip);
-
-  // adaptateur anguleux gris foncé avec bande "X-56"
-  const adapter = chamferBox(0.046, 0.04, 0.05, 0.008, MAT.gunmetal);
-  adapter.position.y = 0.02;
-  grip.add(adapter);
-  grip.add(mesh(new THREE.BoxGeometry(0.048, 0.016, 0.008), MAT.print, 0, 0.028, 0.024));
-  // ancre Twist : l'adaptateur (axe de rotation du manche)
-  grip.add(control("Twist", 0, 0.02, 0, new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.042, 0.054), new THREE.MeshBasicMaterial({ visible: false }))));
-
-  // corps de la poignée : profil (z, y) vu de côté, penché vers l'arrière, section 42 mm
-  const body = profileX([
-    [-0.026, 0.04], [0.026, 0.04],       // base
-    [0.03, 0.08], [0.036, 0.13],          // dos (côté pilote) qui s'évase
-    [0.034, 0.165],                        // épaule arrière
-    [-0.022, 0.17],                        // épaule avant
-    [-0.03, 0.125], [-0.03, 0.08],         // face avant droite
-    [-0.027, 0.055],
-  ], 0.042, MAT.body, 0.005);
-  grip.add(body);
-  // bossage arrière (repose-paume) côté pilote
-  const palm = mesh(new THREE.SphereGeometry(0.022, 24, 16), MAT.body, 0, 0.1, 0.024);
-  palm.scale.set(0.95, 1.6, 0.7);
-  grip.add(palm);
-
-  // --- Tête : bloc anguleux incliné vers le pilote (plateau face au pouce) ---
-  const head = new THREE.Group();
-  head.position.set(0, 0.185, 0.004);
-  head.rotation.x = 0.62; // ~35° vers le pilote
-  grip.add(head);
-  const headBox = chamferBox(0.072, 0.05, 0.082, 0.012, MAT.body);
-  head.add(headBox);
-  // facettes texturées à l'avant de la tête (deux panneaux inclinés)
-  head.add(mesh(new THREE.BoxGeometry(0.03, 0.03, 0.002), MAT.plastic, -0.018, -0.004, -0.0415).rotateY(0.15));
-  head.add(mesh(new THREE.BoxGeometry(0.03, 0.03, 0.002), MAT.plastic, 0.018, -0.004, -0.0415).rotateY(-0.15));
-  // plateau supérieur noir satiné et rétro-éclairage bleu diffus
-  head.add(mesh(new THREE.BoxGeometry(0.066, 0.0015, 0.076), MAT.plastic, 0, 0.0255, 0));
-  head.add(mesh(new THREE.BoxGeometry(0.06, 0.0004, 0.07), MAT.ledRing, 0, 0.0264, 0));
-  head.add(mesh(new THREE.BoxGeometry(0.066, 0.0015, 0.076), MAT.panel, 0, 0.0266, 0));
-  const TOP = 0.0275;
-
-  // Commandes du plateau (vue pilote : POV grand aluminium à gauche-arrière, A petit à gauche-avant,
-  // H1 noir à droite-avant, H2 noir à droite-arrière, Mode = molette crantée sur l'arête arrière)
-  head.add(control("POV", -0.017, TOP, 0.008, povHat()));
-  head.add(control("A", -0.013, TOP, -0.024, aluButton(0.0048, 0.0035)));
-  head.add(control("H1", 0.017, TOP, -0.014, blackHat()));
-  head.add(control("H2", 0.017, TOP, 0.016, blackHat()));
-  const mode = control("Mode", 0.004, 0.02, 0.039, knurledKnob(0.0075, 0.006));
-  mode.rotation.x = Math.PI / 2;
-  head.add(mode);
-  // B : bouton rond à collerette sur le flanc droit de la tête
-  const b = control("B", 0.037, 0.006, 0.004, aluButton(0.0055, 0.004));
-  b.rotation.z = -Math.PI / 2;
-  head.add(b);
-  // petit orifice décoratif sur le flanc droit
-  head.add(mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.002, 12), MAT.gloss, 0.037, 0.012, -0.018).rotateZ(Math.PI / 2));
-
-  // --- Commandes de la poignée ---
-  // Gâchette double détente (gris métal) à l'avant, hauteur index
-  const trig = new THREE.Group();
-  trig.add(mesh(new THREE.BoxGeometry(0.016, 0.046, 0.011), MAT.gunmetal, 0, -0.02, 0));
-  trig.add(mesh(new THREE.BoxGeometry(0.014, 0.012, 0.009), MAT.alu, 0, -0.046, 0.002));
-  trig.rotation.x = 0.18;
-  grip.add(control("Trigger", 0, 0.14, -0.034, trig));
-  // D : bouton rond à collerette sur le flanc gauche (pouce), à mi-hauteur
-  const d = control("D", -0.0225, 0.118, 0.0, aluButton(0.005, 0.0035));
-  d.rotation.z = Math.PI / 2;
-  grip.add(d);
-  // C Stick : mini-stick analogique sur une potence, flanc gauche bas de la poignée
-  const cstick = new THREE.Group();
-  cstick.add(mesh(new THREE.BoxGeometry(0.016, 0.024, 0.018), MAT.body, -0.006, 0, 0));
-  cstick.add(mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.003, 16), MAT.gunmetal, -0.015, 0.005, 0).rotateZ(Math.PI / 2));
-  const stalk = mesh(new THREE.CylinderGeometry(0.002, 0.0024, 0.024, 12), MAT.plastic, -0.026, 0.014, 0);
-  stalk.rotation.z = 0.95;
-  cstick.add(stalk);
-  cstick.add(mesh(new THREE.CylinderGeometry(0.0055, 0.005, 0.007, 24), MAT.knurl, -0.036, 0.022, 0).rotateZ(0.95));
-  grip.add(control("C Stick", -0.02, 0.068, -0.004, cstick));
-  // Pinky : paddle gris plat à l'avant-bas, légèrement à gauche, + levier noir
-  const pinky = new THREE.Group();
-  const paddle = mesh(new THREE.BoxGeometry(0.02, 0.034, 0.004), MAT.gunmetal, 0, 0, 0);
-  paddle.rotation.x = 0.25;
-  pinky.add(paddle);
-  const flying = mesh(new THREE.BoxGeometry(0.005, 0.026, 0.009), MAT.plastic, -0.02, -0.004, 0.006);
-  flying.rotation.z = 0.55; flying.rotation.x = -0.3;
-  pinky.add(flying);
-  pinky.add(mesh(new THREE.SphereGeometry(0.0035, 10, 8), MAT.plastic, -0.03, 0.007, 0.004));
-  grip.add(control("Pinky", -0.012, 0.06, -0.036, pinky));
-
-  // Axes X/Y : ancre invisible sur le cardan
-  root.add(control("X Axis", 0, BH + 0.03, GZ, new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8), new THREE.MeshBasicMaterial({ visible: false }))));
-
-  return root;
-}
-
-// ───────────────────────── MANETTE DES GAZ ─────────────────────────
-//
-// Reconstruite d'après les photos de l'appareil (vues de dessus, de trois
-// quarts, de profil et de dos). Disposition réelle, pilote côté +Z :
-//  - socle 19 × 23,5 cm, plus profond que large, boulons hexagonaux aux angles ;
-//  - bandeau avant : sélecteur MODE à gauche, puis SW 1·2, 3·4, 5·6 séparés
-//    par quatre arceaux chromés ;
-//  - colonne droite, du pilote vers le fond : RTY 4, RTY 3, TGL 1 à TGL 4 en
-//    quinconce ;
-//  - carter des leviers en rampe sur les trois quarts gauches, deux fentes
-//    avec échelles lumineuses, molette de friction sur le flanc GAUCHE ;
-//  - poignée transversale en deux moitiés ; à son extrémité droite le bloc
-//    pouce (F dessus, G dessous, SLD, E, mini-stick, H3, H4) ; sur la face
-//    avant (doigts) H et I à droite, K1 et la molette de défilement à gauche.
-
 /** Marquage imprimé rétro-éclairé (texte à plat, lisible depuis le pilote). */
 function decal(text: string, height: number, color = "#59d0ff"): THREE.Mesh {
   const c = document.createElement("canvas");
@@ -313,6 +140,254 @@ function litArc(r: number, tube: number, start: number, len: number, mat: THREE.
   t.castShadow = false;
   return t;
 }
+
+/**
+ * Volume lissé par sections empilées (« loft ») : chaque section est une
+ * super-ellipse (rx en X, rz en Z, exposant n : 2 = ovale, 5 = presque carré)
+ * centrée en (0, y, cz). Sert à la poignée et à la tête du manche.
+ */
+function loft(sections: { y: number; rx: number; rz: number; cz?: number; n?: number }[], mat: THREE.Material, seg = 44): THREE.Mesh {
+  const pos: number[] = []; const idx: number[] = [];
+  for (const s of sections) {
+    const e = 2 / (s.n ?? 2.4);
+    for (let i = 0; i < seg; i++) {
+      const t = (i / seg) * Math.PI * 2; const c = Math.cos(t), sn = Math.sin(t);
+      pos.push(s.rx * Math.sign(c) * Math.pow(Math.abs(c), e), s.y, (s.cz ?? 0) + s.rz * Math.sign(sn) * Math.pow(Math.abs(sn), e));
+    }
+  }
+  const rings = sections.length;
+  for (let r = 0; r < rings - 1; r++) for (let i = 0; i < seg; i++) {
+    const a = r * seg + i, b2 = r * seg + ((i + 1) % seg), c = a + seg, d = b2 + seg;
+    idx.push(a, c, b2, b2, c, d);
+  }
+  // bouchons
+  const bot = pos.length / 3; pos.push(0, sections[0].y, sections[0].cz ?? 0);
+  const top = bot + 1; const last = sections[rings - 1]; pos.push(0, last.y, last.cz ?? 0);
+  for (let i = 0; i < seg; i++) { idx.push(bot, i, (i + 1) % seg); idx.push(top, (rings - 1) * seg + ((i + 1) % seg), (rings - 1) * seg + i); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  return mesh(geo, mat);
+}
+
+// ───────────────────────────── MANCHE ─────────────────────────────
+//
+// Reconstruit d'après les photos (dessus, face, dos, profils). Pilote côté +Z.
+//  - socle carré, bandeau texturé côté pilote avec la plaque aluminium X-56,
+//    deux secteurs gradués (90° à droite, 270° à gauche), boulons aux angles ;
+//  - cardan : cuvette noire brillante nervurée, ressort apparent, collier ;
+//  - repose-main réglable : plateau gris en coin, côté pilote ;
+//  - poignée penchée vers l'avant, renflement côté paume, bague grise « X-56 » ;
+//  - tête large et anguleuse dont le plateau regarde le pilote : grand hat
+//    POV aluminium à gauche, bouton A au-dessus, hats noirs H1 / H2 à droite,
+//    plateau translucide rétro-éclairé ; bouton B sur le flanc droit ;
+//  - à l'avant : capot à facettes, gâchette grise, levier d'auriculaire ;
+//  - flanc gauche : bouton D et mini-stick C sur sa potence.
+
+export function buildStick(): THREE.Group {
+  const root = new THREE.Group();
+  root.name = "X56 Stick";
+
+  // ───── Socle ─────
+  const BW = 0.19, BD = 0.212, BH = 0.046;
+  root.add(at(rbox(BW, BH - 0.01, BD, 0.012, MAT.body), 0, (BH - 0.01) / 2, 0));
+  root.add(at(rbox(BW - 0.004, 0.01, BD - 0.004, 0.011, MAT.plastic), 0, BH - 0.005, 0));
+  const T = BH;
+  // bandeau côté pilote : surface texturée + plaque aluminium gravée
+  const bandZ = BD / 2 - 0.029;
+  root.add(at(rbox(BW - 0.012, 0.0022, 0.05, 0.004, MAT.rubber), 0, T + 0.0011, bandZ));
+  root.add(at(rbox(0.118, 0.0016, 0.034, 0.002, MAT.alu), 0, T + 0.003, bandZ));
+  root.add(at(decal("X-56", 0.017, "#6d747c"), -0.012, T + 0.0041, bandZ - 0.004));
+  root.add(at(decal("ADVANCED CONTROL FLIGHT SYSTEM", 0.0034, "#7b828a"), -0.004, T + 0.0041, bandZ + 0.009));
+  // rainure entre plateau et bandeau
+  root.add(mesh(new THREE.BoxGeometry(BW - 0.01, 0.0008, 0.0016), MAT.gloss, 0, T + 0.0003, bandZ - 0.0265));
+  // boulons hexagonaux + rondelles
+  [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
+    const x = sx * (BW / 2 - 0.011), z = sz * (BD / 2 - 0.011);
+    root.add(mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.001, 24), MAT.alu, x, T + (sz > 0 ? 0.0027 : 0.0005), z));
+    root.add(mesh(new THREE.CylinderGeometry(0.0043, 0.0043, 0.0035, 6), MAT.alu, x, T + (sz > 0 ? 0.0049 : 0.0027), z));
+  });
+  // patins sous le socle
+  for (const sx of [-1, 1]) root.add(mesh(new THREE.BoxGeometry(0.03, 0.004, 0.012), MAT.rubber, sx * 0.05, -0.002, BD / 2 - 0.01));
+
+  // secteurs gradués : barres radiales grises, plus longues aux extrémités et au centre
+  const GZ = -0.016; // centre du cardan
+  const R0 = 0.062;
+  for (const [a0, a1, mid] of [[Math.PI * 0.22, Math.PI * 0.78, "90°"], [Math.PI * 1.22, Math.PI * 1.78, "270°"]] as [number, number, string][]) {
+    const n = 26;
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + ((a1 - a0) * i) / n;
+      const edge = i === 0 || i === n;
+      const len = edge ? 0.019 : 0.0125;
+      const t = mesh(new THREE.BoxGeometry(0.0026, 0.0005, len), MAT.print, Math.sin(a) * (R0 + len / 2), T + 0.0003, GZ + Math.cos(a) * (R0 + len / 2));
+      t.rotation.y = a; t.castShadow = false;
+      root.add(t);
+    }
+    const am = (a0 + a1) / 2;
+    root.add(at(decal(mid, 0.0042, "#aab0b6"), Math.sin(am) * (R0 + 0.019), T + 0.0004, GZ + Math.cos(am) * (R0 + 0.019)));
+  }
+
+  // ───── Cardan : cuvette brillante nervurée, ressort, collier ─────
+  root.add(mesh(new THREE.CylinderGeometry(0.053, 0.056, 0.004, 64), MAT.gloss, 0, T + 0.002, GZ));
+  for (const [r, tube] of [[0.047, 0.0028], [0.039, 0.0016], [0.033, 0.0016]] as [number, number][]) root.add(mesh(new THREE.TorusGeometry(r, tube, 10, 64), MAT.gloss, 0, T + 0.0045, GZ).rotateX(Math.PI / 2));
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    root.add(mesh(new THREE.BoxGeometry(0.014, 0.0012, 0.005), MAT.rubber, Math.cos(a) * 0.0425, T + 0.0052, GZ + Math.sin(a) * 0.0425).rotateY(-a + Math.PI / 2));
+  }
+  root.add(mesh(new THREE.SphereGeometry(0.026, 32, 14, 0, Math.PI * 2, 0, Math.PI / 2), MAT.gloss, 0, T + 0.003, GZ));
+  // ressort apparent
+  const coil: THREE.Vector3[] = [];
+  for (let i = 0; i <= 120; i++) { const t = i / 120; const a = t * Math.PI * 2 * 5.5; coil.push(new THREE.Vector3(Math.cos(a) * 0.0155, T + 0.018 + t * 0.026, GZ + Math.sin(a) * 0.0155)); }
+  root.add(mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coil), 240, 0.0016, 8, false), MAT.gunmetal));
+  root.add(mesh(new THREE.CylinderGeometry(0.011, 0.012, 0.034, 24), MAT.plastic, 0, T + 0.03, GZ));
+  root.add(mesh(new THREE.CylinderGeometry(0.0205, 0.0205, 0.005, 40), MAT.plastic, 0, T + 0.0465, GZ));
+
+  // ───── Poignée (repère local au-dessus du collier), penchée vers l'avant ─────
+  const LEAN = 0.15;
+  const grip = new THREE.Group();
+  grip.position.set(0, T + 0.049, GZ);
+  grip.rotation.x = -LEAN;
+  root.add(grip);
+
+  // collier de serrage + repose-main en coin côté pilote
+  grip.add(at(chamferBox(0.05, 0.012, 0.052, 0.01, MAT.plastic), 0, 0.006, 0));
+  const restShape = new THREE.Shape();
+  restShape.moveTo(-0.02, 0); restShape.lineTo(0.02, 0); restShape.lineTo(0.036, 0.05); restShape.lineTo(0.03, 0.062); restShape.lineTo(-0.03, 0.062); restShape.lineTo(-0.036, 0.05); restShape.closePath();
+  const restGeo = new THREE.ExtrudeGeometry(restShape, { depth: 0.005, bevelEnabled: true, bevelThickness: 0.0012, bevelSize: 0.0012, bevelSegments: 2 });
+  restGeo.rotateX(Math.PI / 2); // la forme (x, y) passe dans le plan (x, z), épaisseur vers −Y
+  const rest = mesh(restGeo, MAT.gunmetal);
+  rest.position.set(0, 0.013, 0.022); rest.rotation.x = LEAN + 0.1;
+  grip.add(rest);
+  const lip = mesh(new THREE.BoxGeometry(0.058, 0.007, 0.004), MAT.gunmetal, 0, 0.0085, 0.082); lip.rotation.x = LEAN + 0.1; grip.add(lip);
+  // molette de blocage du repose-main, côté gauche
+  grip.add(mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.012, 12), MAT.plastic, -0.031, 0.008, 0.004).rotateZ(Math.PI / 2));
+
+  // bague de twist grise, bandes latérales « X-56 »
+  grip.add(loft([{ y: 0.012, rx: 0.0235, rz: 0.0255, n: 3.2 }, { y: 0.03, rx: 0.0232, rz: 0.0252, n: 3.2 }, { y: 0.046, rx: 0.0222, rz: 0.0244, n: 3 }], MAT.gunmetal));
+  for (const sx of [-1, 1]) {
+    grip.add(mesh(new THREE.BoxGeometry(0.0008, 0.03, 0.018), MAT.print, sx * 0.0236, 0.03, 0.002));
+    const tx = decal("X-56", 0.0085, "#3a4047"); tx.rotation.set(0, sx * Math.PI / 2, sx * Math.PI / 2); tx.position.set(sx * 0.0242, 0.03, 0.002); grip.add(tx);
+  }
+  grip.add(control("Twist", 0, 0.03, 0, new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.027, 0.036, 16), new THREE.MeshBasicMaterial({ visible: false }))));
+
+  // corps : manche caoutchouté, renflement côté paume (+Z), col qui s'évase vers la tête
+  grip.add(loft([
+    { y: 0.044, rx: 0.0212, rz: 0.0235, cz: 0.0, n: 2.8 },
+    { y: 0.064, rx: 0.0208, rz: 0.0232, cz: 0.001, n: 2.6 },
+    { y: 0.086, rx: 0.0212, rz: 0.0252, cz: 0.003, n: 2.5 },
+    { y: 0.108, rx: 0.022, rz: 0.027, cz: 0.005, n: 2.5 },
+    { y: 0.128, rx: 0.0222, rz: 0.0262, cz: 0.004, n: 2.6 },
+    { y: 0.146, rx: 0.0235, rz: 0.0255, cz: 0.003, n: 2.8 },
+    { y: 0.16, rx: 0.0275, rz: 0.028, cz: 0.004, n: 3.2 },
+    { y: 0.172, rx: 0.033, rz: 0.032, cz: 0.006, n: 3.6 },
+  ], MAT.body));
+  // ligne de joint des deux demi-coques
+  grip.add(mesh(new THREE.BoxGeometry(0.0008, 0.1, 0.001), MAT.gloss, 0, 0.1, 0.0318));
+
+  // ───── Tête : large, anguleuse, plateau tourné vers le pilote ─────
+  const head = new THREE.Group();
+  head.position.set(0, 0.186, 0.004);
+  head.rotation.x = LEAN + 0.6;
+  grip.add(head);
+  head.add(loft([
+    { y: -0.03, rx: 0.034, rz: 0.035, cz: 0.003, n: 4 },
+    { y: -0.02, rx: 0.0395, rz: 0.042, cz: 0.001, n: 4.6 },
+    { y: 0.004, rx: 0.0415, rz: 0.0445, cz: 0, n: 5 },
+    { y: 0.018, rx: 0.041, rz: 0.044, cz: 0, n: 5 },
+    { y: 0.0225, rx: 0.039, rz: 0.042, cz: 0, n: 5 },
+  ], MAT.body));
+  // capot avant à facettes (deux panneaux texturés en V) + arête centrale
+  for (const sx of [-1, 1]) {
+    const pan = mesh(new THREE.BoxGeometry(0.036, 0.034, 0.004), MAT.rubber, sx * 0.0185, -0.002, -0.0445);
+    pan.rotation.y = -sx * 0.2; pan.rotation.x = -0.12; head.add(pan);
+  }
+  head.add(mesh(new THREE.BoxGeometry(0.004, 0.038, 0.006), MAT.plastic, 0, -0.001, -0.0475).rotateX(-0.12));
+  head.add(at(rbox(0.07, 0.006, 0.012, 0.003, MAT.plastic), 0, 0.019, -0.043));
+  // plateau : cerclage noir, dalle translucide rétro-éclairée
+  head.add(at(rbox(0.076, 0.002, 0.082, 0.012, MAT.plastic), 0, 0.0232, 0));
+  const glow = new THREE.MeshStandardMaterial({ color: 0x0a1c30, emissive: 0x0f4f9a, emissiveIntensity: 0.32, roughness: 0.22, metalness: 0.35 });
+  head.add(at(rbox(0.07, 0.0012, 0.076, 0.01, glow), 0, 0.0246, 0));
+  const TOP = 0.0252;
+  // séparation en biais entre la moitié POV et la moitié hats + repère « ADV »
+  head.add(mesh(new THREE.BoxGeometry(0.0009, 0.0006, 0.07), MAT.gloss, 0.001, TOP, 0).rotateY(0.1));
+  head.add(at(decal("▲ADV", 0.0036, "#9fd8ff"), -0.004, TOP + 0.0003, 0.031));
+
+  // POV : grande coupelle aluminium à gauche (côté pilote), vis centrale
+  const pov = new THREE.Group();
+  pov.add(cyl(0.0165, 0.0172, 0.003, MAT.plastic, 48));
+  pov.add(mesh(new THREE.CylinderGeometry(0.015, 0.0158, 0.007, 48), MAT.alu, 0, 0.005, 0));
+  pov.add(mesh(new THREE.CylinderGeometry(0.0118, 0.0148, 0.0035, 48), MAT.alu, 0, 0.0102, 0));
+  pov.add(mesh(new THREE.TorusGeometry(0.0118, 0.0009, 8, 48), MAT.chrome, 0, 0.012, 0).rotateX(Math.PI / 2));
+  pov.add(mesh(new THREE.CylinderGeometry(0.0034, 0.0034, 0.0012, 6), MAT.gunmetal, 0, 0.0124, 0));
+  head.add(control("POV", -0.0185, TOP, 0.008, pov));
+  // A : petit bouton rond en haut à gauche
+  const aB = new THREE.Group();
+  aB.add(cyl(0.0068, 0.0072, 0.002, MAT.gloss, 28)); aB.add(mesh(new THREE.CylinderGeometry(0.005, 0.0054, 0.0035, 24), MAT.plastic, 0, 0.0027, 0));
+  aB.add(at(litArc(0.0061, 0.0005, 0, Math.PI * 2, MAT.led), 0, 0.0021, 0));
+  head.add(control("A", -0.0135, TOP, -0.026, aB));
+  head.add(at(decal("A", 0.0038, "#bfe6ff"), -0.0135, TOP + 0.0048, -0.026));
+  // H1 (haut) et H2 (bas) : hats noirs crénelés, à droite
+  head.add(control("H1", 0.0185, TOP, -0.017, blackHat(0.0112)));
+  head.add(control("H2", 0.0185, TOP, 0.017, blackHat(0.0112)));
+  head.add(at(decal("H1", 0.0034, "#bfe6ff"), 0.0345, TOP + 0.0003, -0.017));
+  head.add(at(decal("H2", 0.0034, "#bfe6ff"), 0.0345, TOP + 0.0003, 0.017));
+  // B : bouton rond sur le flanc droit de la tête
+  const bB = new THREE.Group();
+  bB.add(cyl(0.0078, 0.0082, 0.0018, MAT.gloss, 28)); bB.add(mesh(new THREE.CylinderGeometry(0.0058, 0.0062, 0.0038, 24), MAT.plastic, 0, 0.0028, 0));
+  bB.add(at(litArc(0.0069, 0.0005, 0, Math.PI * 2, MAT.led), 0, 0.002, 0));
+  const b = control("B", 0.0408, 0.002, 0.012, bB); b.rotation.z = -Math.PI / 2; head.add(b);
+  for (const z of [-0.012, -0.022]) head.add(mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.001, 10), MAT.gloss, 0.0412, 0.004, z).rotateZ(Math.PI / 2));
+
+  // ───── Commandes de la poignée ─────
+  // gâchette : longue lame grise articulée sous le capot avant
+  const trig = new THREE.Group();
+  trig.add(mesh(new THREE.BoxGeometry(0.0125, 0.012, 0.016), MAT.plastic, 0, 0.004, 0.004));
+  const blade = mesh(new THREE.BoxGeometry(0.0135, 0.05, 0.0065), MAT.gunmetal, 0, -0.024, -0.002); blade.rotation.x = 0.1; trig.add(blade);
+  const tip = mesh(new THREE.CylinderGeometry(0.0034, 0.0034, 0.0135, 16), MAT.gunmetal, 0, -0.049, -0.0045); tip.rotation.z = Math.PI / 2; trig.add(tip);
+  grip.add(control("Trigger", 0, 0.156, -0.0275, trig));
+  // D : bouton rond du flanc gauche, sous la tête
+  const dB = new THREE.Group();
+  dB.add(cyl(0.0066, 0.007, 0.0018, MAT.gloss, 24)); dB.add(mesh(new THREE.CylinderGeometry(0.0048, 0.0052, 0.0036, 24), MAT.plastic, 0, 0.0027, 0));
+  const d = control("D", -0.0228, 0.126, 0.006, dB); d.rotation.z = Math.PI / 2; grip.add(d);
+  // C : mini-stick sur potence, flanc gauche à mi-hauteur
+  const cs = new THREE.Group();
+  cs.add(mesh(new THREE.BoxGeometry(0.012, 0.02, 0.016), MAT.plastic, -0.004, 0, 0));
+  const stalk = mesh(new THREE.CylinderGeometry(0.0021, 0.0026, 0.02, 12), MAT.plastic, -0.016, 0.008, 0); stalk.rotation.z = 0.95; cs.add(stalk);
+  const capG = new THREE.Group(); capG.position.set(-0.0245, 0.014, 0); capG.rotation.z = 0.95;
+  capG.add(cyl(0.0058, 0.0052, 0.006, MAT.rubber, 12)); capG.add(mesh(new THREE.CylinderGeometry(0.0038, 0.0058, 0.0016, 12), MAT.plastic, 0, 0.0038, 0));
+  cs.add(capG);
+  grip.add(control("C Stick", -0.0205, 0.092, -0.002, cs));
+  grip.add((() => { const t = decal("C", 0.0036, "#aab0b6"); t.rotation.set(0, -Math.PI / 2, 0); t.position.set(-0.0222, 0.076, 0.004); return t; })());
+  // auriculaire : palette + levier courbe à l'avant-bas
+  const pinky = new THREE.Group();
+  const paddle = mesh(new THREE.BoxGeometry(0.018, 0.03, 0.0045), MAT.gunmetal); paddle.rotation.x = 0.2; pinky.add(paddle);
+  const lever = new THREE.CatmullRomCurve3([new THREE.Vector3(0.006, -0.012, -0.002), new THREE.Vector3(0.011, -0.022, -0.008), new THREE.Vector3(0.0135, -0.03, -0.019), new THREE.Vector3(0.014, -0.034, -0.03)]);
+  pinky.add(mesh(new THREE.TubeGeometry(lever, 20, 0.0036, 10, false), MAT.plastic));
+  pinky.add(mesh(new THREE.SphereGeometry(0.0046, 14, 10), MAT.plastic, 0.014, -0.034, -0.03));
+  grip.add(control("Pinky", 0, 0.078, -0.0265, pinky));
+
+  // ancres sans pièce propre : axes X/Y (cardan) et sélecteur de mode (commun avec la manette des gaz)
+  root.add(control("X Axis", 0, T + 0.03, GZ, new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), new THREE.MeshBasicMaterial({ visible: false }))));
+  root.add(control("Mode", 0.07, T + 0.004, bandZ, new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.004, 0.02), new THREE.MeshBasicMaterial({ visible: false }))));
+
+  return root;
+}
+
+// ───────────────────────── MANETTE DES GAZ ─────────────────────────
+//
+// Reconstruite d'après les photos de l'appareil (vues de dessus, de trois
+// quarts, de profil et de dos). Disposition réelle, pilote côté +Z :
+//  - socle 19 × 23,5 cm, plus profond que large, boulons hexagonaux aux angles ;
+//  - bandeau avant : sélecteur MODE à gauche, puis SW 1·2, 3·4, 5·6 séparés
+//    par quatre arceaux chromés ;
+//  - colonne droite, du pilote vers le fond : RTY 4, RTY 3, TGL 1 à TGL 4 en
+//    quinconce ;
+//  - carter des leviers en rampe sur les trois quarts gauches, deux fentes
+//    avec échelles lumineuses, molette de friction sur le flanc GAUCHE ;
+//  - poignée transversale en deux moitiés ; à son extrémité droite le bloc
+//    pouce (F dessus, G dessous, SLD, E, mini-stick, H3, H4) ; sur la face
+//    avant (doigts) H et I à droite, K1 et la molette de défilement à gauche.
 
 /** Inverseur à levier chromé, double anneau lumineux, incliné de `tilt` rad vers l'avant. */
 function toggleSwitch(leverLen: number, tilt: number): THREE.Group {
