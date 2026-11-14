@@ -115,7 +115,22 @@ function blackHat(r = 0.0105): THREE.Group {
 }
 
 /** Marquage imprimé rétro-éclairé (texte à plat, lisible depuis le pilote). */
+/** Variante Saitek en cours de construction : le X-55 et le X-65F reprennent les volumes du X56 avec leurs marquages jaunes. */
+export type SaitekVariant = "x56" | "x55" | "x65f";
+let VAR: SaitekVariant = "x56";
+const BLUE_INK = new Set(["#59d0ff", "#9fd8ff", "#bfe6ff", "#7dff9a"]);
+const YELLOW_INK = "#ecd53a";
+function variantText(text: string): string {
+  if (VAR === "x56") return text;
+  if (text === "X-56") return VAR === "x55" ? "X-55" : "X65F";
+  if (text === "ADVANCED CONTROL FLIGHT SYSTEM") return VAR === "x55" ? "RHINO H.O.T.A.S. SYSTEM" : "PRO FLIGHT CONTROL SYSTEM";
+  if (text === "RTY 3") return "RTY 1";
+  if (text === "RTY 4") return "RTY 2";
+  return text;
+}
+
 function decal(text: string, height: number, color = "#59d0ff"): THREE.Mesh {
+  if (VAR !== "x56") { text = variantText(text); if (BLUE_INK.has(color)) color = YELLOW_INK; }
   const c = document.createElement("canvas");
   const g = c.getContext("2d")!;
   const px = 44;
@@ -130,6 +145,7 @@ function decal(text: string, height: number, color = "#59d0ff"): THREE.Mesh {
   const m = new THREE.Mesh(new THREE.PlaneGeometry((height * c.width) / c.height, height), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
   m.rotation.x = -Math.PI / 2;
   m.renderOrder = 2;
+  m.name = "decal:" + text;
   return m;
 }
 
@@ -306,7 +322,9 @@ export function buildStick(): THREE.Group {
   head.add(at(rbox(0.07, 0.006, 0.012, 0.003, MAT.plastic), 0, 0.019, -0.043));
   // plateau : cerclage noir, dalle translucide rétro-éclairée
   head.add(at(rbox(0.076, 0.002, 0.082, 0.012, MAT.plastic), 0, 0.0232, 0));
-  const glow = new THREE.MeshStandardMaterial({ color: 0x0a1c30, emissive: 0x0f4f9a, emissiveIntensity: 0.32, roughness: 0.22, metalness: 0.35 });
+  const glow = VAR === "x56"
+    ? new THREE.MeshStandardMaterial({ color: 0x0a1c30, emissive: 0x0f4f9a, emissiveIntensity: 0.32, roughness: 0.22, metalness: 0.35 })
+    : new THREE.MeshStandardMaterial({ color: 0x15181c, roughness: 0.5, metalness: 0.2 });   // X-55 / X-65F : dalle noire, non éclairée
   head.add(at(rbox(0.07, 0.0012, 0.076, 0.01, glow), 0, 0.0246, 0));
   const TOP = 0.0252;
   // séparation en biais entre la moitié POV et la moitié hats + repère « ADV »
@@ -734,3 +752,79 @@ export function buildDeviceModel(deviceName: string): THREE.Group | null {
 
 /** Outils partagés avec les autres modèles (models-extra.ts). */
 export const KIT = { mesh, rbox, chamferBox, profileX, at, cyl, knurledKnob, control, aluButton, blackHat, decal, litArc, loft };
+
+// ─────────────── Variantes Saitek X-55 Rhino et X-65F ───────────────
+const V_MAT = {
+  yellow: new THREE.MeshStandardMaterial({ color: 0xe8d23a, emissive: 0x6b5f10, emissiveIntensity: 0.5, roughness: 0.7 }),
+  green: new THREE.MeshStandardMaterial({ color: 0x86f04a, emissive: 0x5fd62a, emissiveIntensity: 1.6, roughness: 0.35 }),
+  red: new THREE.MeshStandardMaterial({ color: 0xd0242c, roughness: 0.45, metalness: 0.15 }),
+};
+
+/** Bande de danger jaune et noire, à plat. */
+function hazard(w: number, d: number): THREE.Mesh {
+  const c = document.createElement("canvas"); c.width = 256; c.height = Math.max(16, Math.round((256 * d) / w));
+  const g = c.getContext("2d")!;
+  g.fillStyle = "#16181b"; g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = "#ecd53a";
+  for (let x = -c.height; x < c.width + c.height; x += 34) { g.beginPath(); g.moveTo(x, c.height); g.lineTo(x + 17, c.height); g.lineTo(x + 17 + c.height, 0); g.lineTo(x + c.height, 0); g.closePath(); g.fill(); }
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7 }));
+  m.rotation.x = -Math.PI / 2; m.receiveShadow = true;
+  return m;
+}
+
+/** Remplace l'éclairage bleu du X56 par les marquages jaunes / verts, retire ce que la variante n'a pas. */
+function restyle(root: THREE.Group, v: SaitekVariant, part: "stick" | "throttle"): THREE.Group {
+  const drop: THREE.Object3D[] = [];
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (m.isMesh) {
+      if (m.material === MAT.led) m.material = part === "throttle" ? V_MAT.green : V_MAT.yellow;
+      else if (m.material === MAT.ledRing) m.material = part === "throttle" ? V_MAT.green : V_MAT.yellow;
+      else if (m.material === MAT.aluLit) m.material = MAT.alu;
+      else if (m.material === MAT.print && m.parent === root) m.material = V_MAT.yellow;   // graduations du socle
+    }
+    if (part === "stick" && v === "x55" && (o.userData.control === "C Stick" || o.name === "decal:C")) drop.push(o);
+    if (part === "stick" && o.userData.control === "Mode") drop.push(o);   // le sélecteur de mode est sur les gaz
+  });
+  drop.forEach((o) => o.parent?.remove(o));
+  // boutons rouges : A (dessus) et B (flanc) sur le manche, E sur les gaz
+  const swap = (name: string, from: THREE.Material[], to: THREE.Material) =>
+    root.traverse((o) => { if (o.userData.control === name) o.traverse((k) => { const m = k as THREE.Mesh; if (m.isMesh && from.includes(m.material as THREE.Material)) m.material = to; }); });
+  if (part === "stick") {
+    swap("A", [MAT.alu, MAT.plastic], V_MAT.red); swap("B", [MAT.alu, MAT.plastic], V_MAT.red);
+    swap("POV", [MAT.alu, MAT.chrome], MAT.plastic);          // chapeau POV noir
+    swap("H2", [MAT.plastic], MAT.gunmetal);                  // chapeau créneau métal
+  } else swap("E", [MAT.alu], V_MAT.red);
+  root.name = (v === "x55" ? "X-55 " : "X-65F ") + part;
+  return root;
+}
+
+function withVariant(v: SaitekVariant, part: "stick" | "throttle", build: () => THREE.Group): THREE.Group {
+  const prev = VAR; VAR = v;
+  try { return restyle(build(), v, part); } finally { VAR = prev; }
+}
+
+/** Manche X-55 Rhino : volumes du X56, sans mini-stick C, marquages jaunes, bande de danger sur le socle. */
+export function buildX55Stick(): THREE.Group {
+  const g = withVariant("x55", "stick", buildStick);
+  g.add(at(hazard(0.07, 0.012), -0.052, 0.0463, -0.094));
+  return g;
+}
+/** Manette des gaz X-55 Rhino : anneaux verts, bandes de danger, RTY 1 / RTY 2. */
+export function buildX55Throttle(): THREE.Group {
+  const g = withVariant("x55", "throttle", buildThrottle);
+  g.add(at(hazard(0.05, 0.012), -0.06, 0.0486, 0.108));
+  g.add(at(hazard(0.04, 0.01), 0.064, 0.0463, -0.105));
+  g.traverse((o) => { if (o.userData.control === "Rotary 3") o.userData.label = "RTY 1"; if (o.userData.control === "Rotary 4") o.userData.label = "RTY 2"; });
+  return g;
+}
+/** Manche X-65F (capteurs d'effort) : poignée de la famille X-55 posée sur un socle surélevé à deux patins. */
+export function buildX65FStick(): THREE.Group {
+  const g = withVariant("x65f", "stick", buildStick);
+  const out = new THREE.Group(); out.name = "X-65F stick";
+  g.position.y = 0.03; out.add(g);
+  for (const sx of [-1, 1]) out.add(at(rbox(0.034, 0.03, 0.2, 0.006, MAT.body), sx * 0.078, 0.015, 0));
+  out.add(at(rbox(0.12, 0.012, 0.06, 0.004, MAT.body), 0, 0.024, -0.07));
+  return out;
+}

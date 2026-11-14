@@ -9,7 +9,7 @@
  */
 import * as THREE from "three";
 import { MAT } from "./materials";
-import { KIT, buildStick, buildThrottle, registerModels } from "./models";
+import { KIT, buildX55Stick, buildX55Throttle, buildX65FStick, registerModels } from "./models";
 
 const { mesh, rbox, chamferBox, at, cyl, control, decal, loft, knurledKnob } = KIT;
 type G = THREE.Group;
@@ -679,29 +679,52 @@ export function buildX45(): G {
 // gaz double avec pupitre de modes à l'arrière.
 export function buildX65F(): G {
   const root = new THREE.Group(); root.name = "X-65F";
-  const stick = buildStick(); stick.position.x = 0.14; root.add(stick);
+  const stick = buildX65FStick(); stick.position.x = 0.14; root.add(stick);
+  const yellow = new THREE.MeshStandardMaterial({ color: 0xe8d23a, emissive: 0x6b5f10, emissiveIntensity: 0.5, roughness: 0.7 });
   const t = grp(root, -0.14, 0, 0);
-  const H = 0.04;
-  t.add(at(rbox(0.2, H, 0.24, 0.01, MAT.body), 0, H / 2, 0));
-  t.add(at(rbox(0.09, 0.05, 0.03, 0.004, MAT.plastic), 0.03, H + 0.025, 0.1));    // pupitre arrière
-  ["T1", "T2", "T3", "T4"].forEach((n, i) => t.add(ctl(n, n, 0.0 + i * 0.02, H + 0.052, 0.1, key(0.014, 0.012, X.orangeLit))));
-  t.add(ctl("Bouton Danger", "46", -0.03, H + 0.052, 0.1, push(0.006, 0.004, X.red)));
-  const arm = (x: number) => { const g = grp(t, x, H, -0.02, -0.3); g.add(at(rbox(0.012, 0.07, 0.022, 0.003, X.steel), 0, 0.035, 0)); return g; };
-  const aL = arm(-0.05), aR = arm(-0.008);
-  aL.add(ctl("Gaz gauche", "GAZ G", -0.004, 0.1, 0, rbox(0.038, 0.07, 0.06, 0.014, MAT.body)));
-  aR.add(ctl("Gaz droit", "GAZ D", 0.008, 0.104, 0, rbox(0.044, 0.078, 0.064, 0.014, MAT.body)));
-  const rt = grp(aR, 0.031, 0.108, 0, 0, 0, RIGHT);
-  rt.add(ctl("Chapeau gaz haut", "H4", -0.022, 0, 0.008, hat(0.006, MAT.plastic, "dome")));
-  rt.add(ctl("Chapeau gaz bas", "H5", 0.0, 0, 0.012, hat(0.006, MAT.plastic, "cross")));
-  rt.add(ctl("Chapeau gaz créneau", "H6", 0.02, 0, 0.004, hat(0.006, MAT.plastic, "castle")));
-  rt.add(ctl("Rotatif E", "E", -0.016, 0, -0.016, knurledKnob(0.007, 0.007, MAT.knurl)));
-  rt.add(ctl("Rotatif F", "F", 0.008, 0, -0.016, knurledKnob(0.007, 0.007, MAT.knurl)));
-  const rf = grp(aR, 0.008, 0.112, -0.033, FRONT);
-  rf.add(ctl("Chapeau molette", "H7", 0, 0, 0.014, ministick(0.006)));
-  rf.add(ctl("Molette", "MOLETTE", 0.012, 0, -0.008, knurledKnob(0.006, 0.006, MAT.knurl).rotateZ(Math.PI / 2)));
-  rf.add(ctl("Bascule K", "K", -0.01, 0, -0.01, rbox(0.008, 0.006, 0.016, 0.002, X.steel)));
-  const lf = grp(aL, -0.024, 0.1, 0, 0, 0, LEFT);
-  lf.add(ctl("Bouton D (postcombustion)", "D", 0, 0, 0, push(0.0055, 0.003, X.red)));
+  // socle en coin : deux patins, plateau incliné vers le pilote, deux fentes graduées
+  for (const sx of [-1, 1]) t.add(at(rbox(0.03, 0.03, 0.22, 0.006, MAT.body), sx * 0.075, 0.015, 0));
+  const deck = grp(t, 0, 0.03, 0, 0.1);
+  deck.add(at(rbox(0.19, 0.03, 0.2, 0.008, MAT.body), 0, 0.015, 0));
+  const D = 0.031;
+  for (const sx of [-1, 1]) {
+    deck.add(mesh(new THREE.BoxGeometry(0.022, 0.001, 0.09), MAT.gloss, -0.03 + sx * 0.02, D, 0.01));
+    for (let i = 0; i < 7; i++) deck.add(mesh(new THREE.BoxGeometry(0.014, 0.0006, 0.0012), MAT.print, -0.03 + sx * 0.02, D + 0.0006, -0.02 + i * 0.01));
+  }
+  deck.add(at(decal("X65F", 0.009, "#ecd53a"), 0.05, D + 0.0006, 0.07));
+  // pupitre arrière sur potence : touches de mode orange, T1–T4, bouton rouge
+  t.add(at(rbox(0.014, 0.1, 0.014, 0.003, MAT.plastic), 0.05, 0.08, -0.105));
+  const panel = grp(t, 0.05, 0.15, -0.1, 1.15);
+  panel.add(at(rbox(0.13, 0.03, 0.075, 0.004, MAT.body), 0, -0.015, 0));
+  panel.add(at(rbox(0.058, 0.001, 0.066, 0.002, MAT.gloss), 0.033, 0.0006, 0));
+  for (let i = 0; i < 4; i++) panel.add(mesh(new THREE.BoxGeometry(0.05, 0.0004, 0.001), MAT.print, 0.033, 0.0012, -0.02 + i * 0.013));
+  for (let i = 0; i < 4; i++) panel.add(at(key(0.009, 0.007, X.orangeLit), -0.046 + i * 0.011, 0.0005, -0.022));
+  ["T1", "T2", "T3", "T4"].forEach((n, i) => panel.add(ctl(n, n, -0.04 + (i % 2) * 0.022, 0.0005, -0.004 + Math.floor(i / 2) * 0.016, key(0.016, 0.011, MAT.plastic))));
+  panel.add(ctl("Bouton Danger", "SAFE", -0.056, 0.0005, -0.022, key(0.01, 0.009, X.red)));
+  // leviers : deux galets jumelés, le droit plus large, graduations jaunes
+  const arm = (x: number) => { const g = grp(deck, x, D, 0.01, -0.35); g.add(at(rbox(0.014, 0.05, 0.03, 0.003, MAT.plastic), 0, 0.025, 0)); return g; };
+  const aL = arm(-0.05), aR = arm(-0.01);
+  const podL = mesh(new THREE.SphereGeometry(1, 40, 24), MAT.body); podL.scale.set(0.021, 0.036, 0.05);
+  const podR = mesh(new THREE.SphereGeometry(1, 40, 24), MAT.body); podR.scale.set(0.026, 0.04, 0.054);
+  aL.add(ctl("Gaz gauche", "GAZ G", -0.002, 0.075, 0, podL));
+  aR.add(ctl("Gaz droit", "GAZ D", 0.008, 0.078, 0, podR));
+  aR.add(mesh(new THREE.BoxGeometry(0.001, 0.05, 0.002), yellow, -0.012, 0.08, 0.03));
+  // bloc de commandes prolongeant le levier droit (côté pouce)
+  const blk = grp(aR, 0.046, 0.082, -0.004);
+  blk.add(at(rbox(0.05, 0.04, 0.05, 0.008, MAT.plastic), 0, 0, 0));
+  blk.add(ctl("Rotatif E", "E", 0.006, 0.02, -0.012, knurledKnob(0.012, 0.012, MAT.plastic)));
+  blk.add(ctl("Rotatif F", "F", -0.012, -0.02, -0.014, knurledKnob(0.009, 0.008, MAT.plastic).rotateX(Math.PI)));
+  const bk = grp(blk, 0, 0, 0.0255, BACK);                       // face tournée vers le pilote
+  bk.add(ctl("Chapeau gaz haut", "H4", -0.014, 0, -0.006, hat(0.0058, MAT.plastic, "castle")));
+  bk.add(ctl("Chapeau gaz bas", "H5", 0.006, 0, -0.004, hat(0.0062, MAT.alu, "dome")));
+  bk.add(ctl("Bascule K", "K", 0.018, 0, 0.01, rbox(0.012, 0.005, 0.007, 0.002, MAT.plastic)));
+  const rt = grp(blk, 0.0255, 0, 0, 0, 0, RIGHT);                // bout droit
+  rt.add(ctl("Molette", "MOLETTE", 0, 0, 0.004, knurledKnob(0.008, 0.008, MAT.alu)));
+  const fr = grp(blk, 0, 0, -0.0255, FRONT);                     // côté doigts
+  fr.add(ctl("Chapeau gaz créneau", "H6", 0.01, 0, 0.004, hat(0.0058, MAT.plastic, "castle")));
+  fr.add(ctl("Chapeau molette", "H7", -0.01, 0, -0.002, ministick(0.0055)));
+  const lf = grp(aL, -0.022, 0.07, 0.01, 0, 0, LEFT);
+  lf.add(ctl("Bouton D (postcombustion)", "D", 0, 0, 0, key(0.012, 0.016, X.grey)));
   return root;
 }
 
@@ -893,8 +916,8 @@ export const EXTRA_MODELS: { test: RegExp; build: () => G }[] = [
   { test: /Fighterstick/i, build: buildCHStick },
   { test: /Pro Throttle/i, build: buildCHThrottle },
   { test: /VelocityOne/i, build: buildVelocityOne },
-  { test: /X-55.*manche/i, build: buildStick },
-  { test: /X-55.*gaz/i, build: buildThrottle },
+  { test: /X-55.*manche/i, build: buildX55Stick },
+  { test: /X-55.*gaz/i, build: buildX55Throttle },
   { test: /X-65F/i, build: buildX65F },
   { test: /X-45/i, build: buildX45 },
   { test: /F\.L\.Y/i, build: buildFly5 },
