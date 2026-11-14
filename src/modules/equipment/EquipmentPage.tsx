@@ -3,7 +3,7 @@ import { PageHeader, SectionHead, Note } from "../../components/Hud";
 import { MODULE_ART } from "../../lib/images";
 import { age, auec, errText, isOld, nf } from "../market/uex";
 import {
-  OTHER_SECTION, SECTIONS, WEAPON_FILTERS, attrLabel, catLabel, isWeaponCategory, loadCategories, loadItemDetail, loadItems,
+  OTHER_SECTION, SECTIONS, WEAPON_FILTERS, attrLabel, catLabel, isWeaponCategory, loadCategories, loadItemDetail, groupItems, loadItems,
   type Category, type Item, type ItemDetail,
 } from "./items";
 import { ItemThumb, useItemPic } from "./pics";
@@ -97,6 +97,16 @@ export function EquipmentPage() {
       (!needle || i.name.toLowerCase().includes(needle) || i.company.toLowerCase().includes(needle)) &&
       (!company || i.company === company) && (!f || f.test(i.name)));
   }, [itemList, q, company, wf, weapons]);
+  /* ensembles : un modèle et ses variantes (coloris, éditions) */
+  const [grouped, setGrouped] = useState(true);
+  const allGroups = useMemo(() => groupItems(itemList), [itemList]);
+  const groups = useMemo(() => {
+    const keep = new Set(filtered.map((i) => i.id));
+    return allGroups.map((g) => ({ ...g, items: g.items.filter((v) => keep.has(v.item.id)) })).filter((g) => g.items.length > 0);
+  }, [allGroups, filtered]);
+  const group = itemId == null ? null : allGroups.find((g) => g.items.some((v) => v.item.id === itemId)) ?? null;
+  const nVariants = allGroups.filter((g) => g.items.length > 1).length;
+  const listLen = grouped ? groups.length : filtered.length;
   useEffect(() => { setShown(PAGE); }, [q, company, wf, catId]);
 
   const item = itemId == null ? null : itemList.find((i) => i.id === itemId) ?? null;
@@ -172,6 +182,9 @@ export function EquipmentPage() {
                       </label>
                     )}
                   </div>
+                  {nVariants > 0 && (
+                    <label className="mk-check"><input type="checkbox" checked={grouped} onChange={(e) => { setGrouped(e.target.checked); setShown(PAGE); }} /> Regrouper les variantes d'un même modèle (coloris, éditions)</label>
+                  )}
                   {weapons && (
                     <div role="group" aria-label="Type d'arme" className="mk-cats">
                       <button type="button" className={"tab" + (wf === -1 ? " active" : "")} aria-pressed={wf === -1} onClick={() => setWf(-1)}>Toutes</button>
@@ -179,7 +192,7 @@ export function EquipmentPage() {
                     </div>
                   )}
                   <div className="hint">
-                    {nf(filtered.length)} objet(s) sur {nf(itemList.length)} · liste récupérée {age(items.at)}.
+                    {grouped ? `${nf(groups.length)} modèle(s) · ` : ""}{nf(filtered.length)} objet(s) sur {nf(itemList.length)} · liste récupérée {age(items.at)}.
                     {weapons && " UEX regroupe toutes les armes dans une seule catégorie : les raccourcis ci-dessus filtrent sur le nom anglais de l'objet."}
                   </div>
 
@@ -190,7 +203,26 @@ export function EquipmentPage() {
                           <span>OBJET</span><span>FABRICANT</span>{hasSize && <span className="mk-r">TAILLE</span>}
                         </div>
                         {filtered.length === 0 && <div className="empty" style={{ border: 0 }}>Aucun objet ne correspond à ces filtres.</div>}
-                        {filtered.slice(0, shown).map((i) => (
+                        {grouped && groups.slice(0, shown).map((g) => {
+                          const active = group?.key === g.key;
+                          const lead = (active && g.items.find((v) => v.item.id === itemId)?.item) || g.items[0].item;
+                          return (
+                            <button type="button" key={g.key} className={"row" + (active ? " active" : "")} style={{ gridTemplateColumns: cols }}
+                              aria-pressed={active} onClick={() => { if (!active) setItemId(g.items[0].item.id); }}>
+                              <span className="eq-name">
+                                <ItemThumb key={lead.id} item={lead} />
+                                <span style={{ minWidth: 0 }}>
+                                  <span className="cell-main" style={{ fontSize: 16 }}>{g.items.length > 1 ? g.base : g.items[0].item.name}</span>
+                                  {g.items.length > 1 && <span className="mk-tag cyan">{g.items.length} VARIANTES</span>}
+                                  {g.items.every((v) => v.item.excl) && <span className="mk-tag warn">{EXCL_FR[g.items[0].item.excl as "pledge" | "subscriber" | "concierge"]}</span>}
+                                </span>
+                              </span>
+                              <span className="cell-muted">{g.company || "—"}</span>
+                              {hasSize && <span className="mk-num">{lead.size || "—"}</span>}
+                            </button>
+                          );
+                        })}
+                        {!grouped && filtered.slice(0, shown).map((i) => (
                           <button type="button" key={i.id} className={"row" + (i.id === itemId ? " active" : "")} style={{ gridTemplateColumns: cols }}
                             aria-pressed={i.id === itemId} onClick={() => setItemId(i.id)}>
                             <span className="eq-name">
@@ -205,9 +237,9 @@ export function EquipmentPage() {
                           </button>
                         ))}
                       </div>
-                      {filtered.length > shown && (
+                      {listLen > shown && (
                         <div style={{ padding: 12, textAlign: "center" }}>
-                          <button type="button" className="btn sm" onClick={() => setShown((n) => n + PAGE)}>Afficher {Math.min(PAGE, filtered.length - shown)} de plus</button>
+                          <button type="button" className="btn sm" onClick={() => setShown((n) => n + PAGE)}>Afficher {Math.min(PAGE, listLen - shown)} de plus</button>
                         </div>
                       )}
                     </div>
@@ -218,6 +250,19 @@ export function EquipmentPage() {
                       {item && (
                         <>
                           {itemPic !== null && <Pic key={item.id} src={itemPic?.full ?? null} alt={item.name} ratio="16 / 10" fit="contain" className="eq-hero" />}
+                          {group && group.items.length > 1 && (
+                            <div>
+                              <div className="label" style={{ marginBottom: 6 }}>{group.base.toUpperCase()} · {group.items.length} VARIANTES</div>
+                              <div role="group" aria-label="Variantes" className="eq-variants">
+                                {group.items.map((v) => (
+                                  <button type="button" key={v.item.id} className={"eq-variant" + (v.item.id === item.id ? " active" : "")} aria-pressed={v.item.id === item.id} onClick={() => setItemId(v.item.id)} title={v.item.name}>
+                                    <ItemThumb item={v.item} size={56} />
+                                    <span>{v.variant}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                           {itemPic === null && <div className="hint">Pas encore d'image pour cet objet sur le wiki.</div>}
                           <div>
                             <div className="mono" style={{ fontSize: 11, letterSpacing: ".2em", color: "var(--cyan)" }}>

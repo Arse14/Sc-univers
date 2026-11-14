@@ -121,3 +121,56 @@ export const WEAPON_FILTERS: { label: string; test: (name: string) => boolean }[
   { label: "Couteaux", test: (n) => /\bknife\b/i.test(n) },
 ];
 export const isWeaponCategory = (c: Category | null) => !!c && c.section === "Personal Weapons" && c.name === "Personal Weapons";
+
+/* ---------- ensembles : un modèle et ses variantes (coloris, éditions) ---------- */
+
+export interface ItemGroup { key: string; base: string; company: string; items: { item: Item; variant: string }[] }
+
+/** Mots qui terminent le nom du modèle dans les pièces d'armure et vêtements : ce qui suit est le coloris. */
+const PART = /^(.*?\b(?:Arms|Legs|Helmet|Core|Torso|Backpack|Undersuit|Armor|Suit|Jacket|Pants|Shirt|Gloves|Boots|Shoes|Hat|Cap|Jumpsuit|Coat|Vest|Hoodie|Sweater|Shorts|Skirt|Dress|Goggles|Glasses|Mask|Beanie|Bandana|Scarf|Knife|Pistol|Rifle|SMG|LMG|Shotgun|Launcher|Sniper Rifle|Railgun|Multi-Tool))\b\s*(.*)$/;
+
+/** Nom sans la variante entre guillemets : Karna "Ascension" Rifle → base « Karna Rifle », variante « Ascension ». */
+function unquote(name: string): { rest: string; quoted: string } {
+  const m = /["“”]([^"“”]+)["“”]/.exec(name);
+  if (!m) return { rest: name, quoted: "" };
+  return { rest: (name.slice(0, m.index) + name.slice(m.index + m[0].length)).replace(/\s+/g, " ").trim(), quoted: m[1].trim() };
+}
+
+/**
+ * Regroupe les objets d'une catégorie par modèle. Trois indices, dans l'ordre :
+ * variante entre guillemets, mot-clé de pièce (« ADP Arms » + coloris), puis
+ * préfixe commun à plusieurs objets (« Adiva Jacket » + coloris).
+ */
+export function groupItems(items: Item[]): ItemGroup[] {
+  const split = items.map((item) => {
+    const { rest, quoted } = unquote(item.name);
+    const m = PART.exec(rest);
+    if (m) return { item, base: m[1].trim(), variant: [quoted, m[2].trim()].filter(Boolean).join(" · "), sure: true };
+    return { item, base: rest, variant: quoted, sure: !!quoted };
+  });
+  // préfixe commun pour ceux qui n'ont ni guillemets ni mot-clé : le plus court préfixe d'au moins 2 mots partagé
+  const loose = split.filter((s) => !s.sure);
+  const count = new Map<string, number>();
+  for (const s of loose) { const w = s.base.split(" "); for (let k = 2; k < w.length; k++) { const p = w.slice(0, k).join(" "); count.set(p, (count.get(p) ?? 0) + 1); } }
+  const whole = new Set(loose.map((s) => s.base));
+  for (const s of loose) {
+    const w = s.base.split(" ");
+    for (let k = 2; k < w.length; k++) {
+      const p = w.slice(0, k).join(" ");
+      if ((count.get(p) ?? 0) + (whole.has(p) ? 1 : 0) >= 2) { s.variant = w.slice(k).join(" "); s.base = p; break; }
+    }
+  }
+  const groups = new Map<string, ItemGroup>();
+  for (const s of split) {
+    const key = `${s.base.toLowerCase()}|${s.item.company.toLowerCase()}`;
+    let g = groups.get(key);
+    if (!g) { g = { key, base: s.base, company: s.item.company, items: [] }; groups.set(key, g); }
+    g.items.push({ item: s.item, variant: s.variant });
+  }
+  const out = [...groups.values()];
+  for (const g of out) {
+    g.items.sort((a, b) => (a.variant === "" ? -1 : b.variant === "" ? 1 : a.variant.localeCompare(b.variant, "fr")));
+    for (const v of g.items) if (!v.variant) v.variant = g.items.length > 1 ? "Standard" : "";
+  }
+  return out.sort((a, b) => a.base.localeCompare(b.base, "fr", { numeric: true }));
+}

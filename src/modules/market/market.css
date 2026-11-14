@@ -48,3 +48,9 @@
 .wk-favor { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 15px; }
 .wk-favor b { font-family: var(--font-mono); color: var(--text-bright); }
 .wk-shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 28px; }
+
+.eq-variants { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; max-height: 264px; overflow-y: auto; }
+.eq-variant { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 4px; background: rgba(6, 20, 32, .6); border: 1px solid var(--line); color: var(--text); font: inherit; font-size: 12px; line-height: 1.2; text-align: center; cursor: pointer; }
+.eq-variant:hover { background: rgba(79, 179, 255, .1); }
+.eq-variant.active { border-color: var(--rsi); background: rgba(79, 179, 255, .2); color: var(--text-bright); }
+.eq-variant > span:last-child { overflow-wrap: anywhere; }
