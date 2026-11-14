@@ -54,3 +54,10 @@
 .eq-variant:hover { background: rgba(79, 179, 255, .1); }
 .eq-variant.active { border-color: var(--rsi); background: rgba(79, 179, 255, .2); color: var(--text-bright); }
 .eq-variant > span:last-child { overflow-wrap: anywhere; }
+.set-piece { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 10px 0; border-bottom: 1px solid rgba(98, 208, 255, .1); }
+.set-slot { font-size: 10px; letter-spacing: .2em; color: var(--cyan); }
+.set-where { font-size: 14px; margin-top: 2px; }
+.set-where b { color: var(--text-bright); font-weight: 600; }
+.set-price { text-align: right; color: var(--text-bright); white-space: nowrap; padding-top: 14px; }
+.set-total { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.set-sub { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

@@ -9,6 +9,7 @@ import {
 import { ItemThumb, useItemPic } from "./pics";
 import { Pic } from "../../components/Pic";
 import { WikeloView } from "./WikeloView";
+import { SetsView } from "./SetsView";
 import { CONTRACTS } from "./wikelo";
 import "../market/market.css";
 
@@ -24,7 +25,7 @@ type Async<T> =
 export function EquipmentPage() {
   const [cats, setCats] = useState<Async<Category[]>>({ state: "loading" });
   const [tick, setTick] = useState(0);
-  const [view, setView] = useState<"shops" | "wikelo">("shops");
+  const [view, setView] = useState<"shops" | "sets" | "wikelo">("shops");
   const [section, setSection] = useState<string>(SECTIONS[0].id);
   const [catId, setCatId] = useState<number | null>(null);
   const [items, setItems] = useState<Async<Item[]>>({ state: "idle" });
@@ -122,10 +123,12 @@ export function EquipmentPage() {
 
       <div role="tablist" aria-label="Vue" className="mk-cats">
         <button type="button" role="tab" aria-selected={view === "shops"} className={"tab" + (view === "shops" ? " active" : "")} onClick={() => setView("shops")}>Boutiques en jeu</button>
+        <button type="button" role="tab" aria-selected={view === "sets"} className={"tab" + (view === "sets" ? " active" : "")} onClick={() => setView("sets")}>Ensembles d'armure</button>
         <button type="button" role="tab" aria-selected={view === "wikelo"} className={"tab" + (view === "wikelo" ? " active" : "")} onClick={() => setView("wikelo")}>Wikelo · {CONTRACTS.length} contrats</button>
       </div>
 
       {view === "wikelo" && <WikeloView />}
+      {view === "sets" && <SetsView />}
       {view === "shops" && (<>
       <Note tag="⚠ PRIX COMMUNAUTAIRES">
         Données UEX (uexcorp.space), relevées en jeu par les joueurs : un objet sans boutique listée peut simplement ne pas avoir été relevé (ou ne s'obtenir qu'en butin).

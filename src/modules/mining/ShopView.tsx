@@ -104,9 +104,9 @@ export function MiningShopView() {
       <div className="hint">{info.hint}</div>
 
       <section style={{ display: "flex", flexWrap: "wrap", gap: 20, alignItems: "flex-start" }}>
-        <div className="panel" style={{ flex: "3 1 560px", minWidth: 0 }}>
+        <div className="panel mk-scroll" style={{ flex: "3 1 560px", minWidth: 0 }}>
           {list.length === 0 ? <div className="empty">Aucun objet de ce type trouvé sur UEX.</div> : (
-            <div className="table">
+            <div className="table" style={{ minWidth: 480 }}>
               <div className="head" style={{ gridTemplateColumns: COLS, gap: 10, letterSpacing: ".16em", fontSize: 10 }}>
                 <span>OBJET</span><span style={{ textAlign: "right" }}>PRIX DÈS{sys ? ` (${sys.toUpperCase()})` : ""}</span><span>DISPONIBLE DANS</span>
               </div>
