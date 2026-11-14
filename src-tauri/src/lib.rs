@@ -5,8 +5,11 @@
 //! stocker les réglages de l'application. Toute la logique métier (parseurs,
 //! calculs, affichage) vit côté TypeScript.
 //!
-//! Règle de sécurité : lecture de fichiers uniquement. Aucune lecture de la
-//! mémoire du jeu, aucune injection.
+//! Règle de sécurité : aucune lecture de la mémoire du jeu, aucune injection.
+//! Les seules écritures sont : le dossier de données de l'application
+//! (réglages, cache) et, à la demande explicite de l'utilisateur, un profil
+//! de contrôle dans `controls/mappings` de Star Citizen (fichier que le jeu
+//! sait importer lui-même). `actionmaps.xml` n'est jamais modifié.
 
 use serde::Serialize;
 use std::fs;
@@ -126,10 +129,129 @@ fn import_device_image(app: tauri::AppHandle, source: String, device: String) ->
     Ok(dest.to_string_lossy().to_string())
 }
 
+/// Écrit un profil de contrôle Star Citizen (`*.xml`) dans un dossier
+/// `controls/mappings`. Refuse tout autre emplacement.
+#[tauri::command]
+fn write_mapping_file(path: String, content: String) -> Result<String, String> {
+    let p = PathBuf::from(&path);
+    let norm = path.replace('\\', "/").to_lowercase();
+    let is_xml = p.extension().and_then(|e| e.to_str()).map(|e| e.eq_ignore_ascii_case("xml")).unwrap_or(false);
+    if !is_xml || !norm.contains("/controls/mappings/") || norm.contains("..") {
+        return Err("Emplacement refusé : seuls les fichiers .xml de controls/mappings sont autorisés.".into());
+    }
+    if let Some(parent) = p.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::write(&p, content).map_err(|e| format!("{path} : {e}"))?;
+    Ok(p.to_string_lossy().to_string())
+}
+
+/* ---------- cache disque binaire (modèles 3D des vaisseaux) ---------- */
+
+fn cache_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    let dir = data_dir(app)?.join("cache");
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
+/// Hôtes depuis lesquels le cache accepte de télécharger.
+const CACHE_HOSTS: [&str; 2] = ["fleetyards.net", "starcitizen.tools"];
+
+/// Télécharge `url` dans le cache sous le nom `key`, par morceaux (le
+/// fichier n'est jamais entièrement en mémoire). Renvoie la taille en octets.
+#[tauri::command]
+async fn cache_download(app: tauri::AppHandle, url: String, key: String) -> Result<u64, String> {
+    use std::io::Write;
+    use tauri_plugin_http::reqwest;
+    let parsed = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
+    let host = parsed.host_str().unwrap_or("").to_lowercase();
+    if parsed.scheme() != "https" || !CACHE_HOSTS.iter().any(|h| host == *h || host.ends_with(&format!(".{h}"))) {
+        return Err(format!("Hôte non autorisé pour le cache : {host}"));
+    }
+    let dir = cache_dir(&app)?;
+    let name = sanitize(&key);
+    let dest = dir.join(&name);
+    let tmp = dir.join(format!("{name}.part"));
+    let mut resp = reqwest::Client::new().get(parsed).send().await.map_err(|e| e.to_string())?;
+    if !resp.status().is_success() {
+        return Err(format!("HTTP {}", resp.status().as_u16()));
+    }
+    let mut file = fs::File::create(&tmp).map_err(|e| e.to_string())?;
+    let mut total: u64 = 0;
+    while let Some(chunk) = resp.chunk().await.map_err(|e| e.to_string())? {
+        total += chunk.len() as u64;
+        if total > 200 * 1024 * 1024 {
+            drop(file);
+            let _ = fs::remove_file(&tmp);
+            return Err("Fichier trop volumineux (> 200 Mo)".into());
+        }
+        file.write_all(&chunk).map_err(|e| e.to_string())?;
+    }
+    drop(file);
+    fs::rename(&tmp, &dest).map_err(|e| e.to_string())?;
+    Ok(total)
+}
+
+/// Taille d'une entrée du cache (0 si absente).
+#[tauri::command]
+fn cache_has(app: tauri::AppHandle, key: String) -> Result<u64, String> {
+    let p = cache_dir(&app)?.join(sanitize(&key));
+    Ok(fs::metadata(&p).map(|m| m.len()).unwrap_or(0))
+}
+
+/// Renvoie le contenu brut d'une entrée du cache (réponse binaire, sans base64).
+#[tauri::command]
+fn cache_get(app: tauri::AppHandle, key: String) -> Result<tauri::ipc::Response, String> {
+    let p = cache_dir(&app)?.join(sanitize(&key));
+    let bytes = fs::read(&p).map_err(|e| e.to_string())?;
+    Ok(tauri::ipc::Response::new(bytes))
+}
+
+#[derive(Serialize)]
+struct CacheInfo {
+    files: u64,
+    bytes: u64,
+}
+
+/// Nombre de fichiers et taille totale du cache.
+#[tauri::command]
+fn cache_info(app: tauri::AppHandle) -> Result<CacheInfo, String> {
+    let mut info = CacheInfo { files: 0, bytes: 0 };
+    for e in fs::read_dir(cache_dir(&app)?).map_err(|e| e.to_string())?.flatten() {
+        if let Ok(m) = e.metadata() {
+            if m.is_file() {
+                info.files += 1;
+                info.bytes += m.len();
+            }
+        }
+    }
+    Ok(info)
+}
+
+/// Vide le cache binaire.
+#[tauri::command]
+fn cache_clear(app: tauri::AppHandle) -> Result<(), String> {
+    for e in fs::read_dir(cache_dir(&app)?).map_err(|e| e.to_string())?.flatten() {
+        let _ = fs::remove_file(e.path());
+    }
+    Ok(())
+}
+
+/// Supprime un document JSON de l'application (cache de données périmé).
+#[tauri::command]
+fn delete_store(app: tauri::AppHandle, name: String) -> Result<(), String> {
+    let p = data_dir(&app)?.join(format!("{}.json", sanitize(&name)));
+    if p.is_file() {
+        fs::remove_file(&p).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 fn sanitize(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
-        .collect()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.' { c } else { '_' })
+        .collect::<String>()
+        .replace("..", "_")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -146,7 +268,14 @@ pub fn run() {
             read_file_base64,
             load_store,
             save_store,
-            import_device_image
+            delete_store,
+            import_device_image,
+            write_mapping_file,
+            cache_download,
+            cache_has,
+            cache_get,
+            cache_info,
+            cache_clear
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de SC-Univers");

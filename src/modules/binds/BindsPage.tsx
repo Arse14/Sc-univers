@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
-import { findScInstalls, importDeviceImage, importDeviceModel, isTauri, loadStore, pickFile, readFileAsDataUrl, readTextFile, saveStore, type ScInstall } from "../../lib/tauri";
+import { findScInstalls, importDeviceImage, importDeviceModel, isTauri, loadStore, pickFile, readFileAsDataUrl, readTextFile, saveStore, writeMappingFile, type ScInstall } from "../../lib/tauri";
 import { parsePr0, countControls } from "./parsePr0";
 import { parseActionmaps, indexByInput } from "./parseActionmaps";
 import { inputsForControl, primaryInput } from "./mapping";
 import { actionLabel, actionmapLabel } from "./labels";
 import { useGamepadDetect } from "./useGamepad";
+import { ActionPicker } from "./ActionPicker";
+import type { ScAction } from "./actions";
+import { assign, diff, diffCount, isAxisInput, mappingPathFor, toMappingXml, unassign } from "./profile";
 import { SAMPLE_X56_PR0 } from "./samplePr0";
 import { DeviceView } from "./DeviceView";
 import { Device3D, type Anchor3D } from "./three/Device3D";
@@ -16,10 +19,13 @@ interface BindsStore {
   profilePath: string | null;
   actionmapsPath: string | null;
   devices: Record<string, DeviceConfig>;
+  /** Binds en cours d'édition dans l'application (null = ceux du jeu, non modifiés). */
+  custom?: ScBinding[] | null;
 }
 
 const EMPTY_STORE: BindsStore = { profilePath: null, actionmapsPath: null, devices: {} };
 const STORE_KEY = "binds";
+const NO_BINDS: ScBinding[] = [];
 
 function defaultConfig(index: number): DeviceConfig {
   return { jsSlot: index + 1, imagePath: null, placements: {} };
@@ -40,6 +46,9 @@ export function BindsPage() {
   const [labels3d, setLabels3d] = useState(true);
   const [cat, setCat] = useState<string>("Tous");
   const [error, setError] = useState<string | null>(null);
+  const [picker, setPicker] = useState<{ input: string; label: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [exported, setExported] = useState<string | null>(null);
   const { hit, pads, reset: resetHit } = useGamepadDetect(detecting);
 
   // ----- chargement initial -----
@@ -146,6 +155,32 @@ export function BindsPage() {
     const cfg = store.devices[devId] ?? defaultConfig(0);
     await persist({ ...store, devices: { ...store.devices, [devId]: { ...cfg, jsSlot: slot } } });
   };
+  // ----- gestion des touches -----
+  const original = actionmaps?.bindings ?? NO_BINDS;
+  const effective = store.custom ?? original;
+  const onAssign = async (a: ScAction) => {
+    if (!picker) return;
+    const { next, movedFrom } = assign(effective, a.map, a.name, picker.input);
+    await persist({ ...store, custom: next });
+    setNotice(movedFrom ? `« ${a.label} » déplacée de ${movedFrom} vers ${picker.input}.` : `« ${a.label} » liée à ${picker.input}.`);
+    setExported(null); setPicker(null);
+  };
+  const onUnassign = async (b: ScBinding) => {
+    await persist({ ...store, custom: unassign(effective, b.actionmap, b.action) });
+    setNotice(`« ${actionLabel(b.action, b.actionmap)} » retirée de ${b.input}.`); setExported(null);
+  };
+  const onResetBinds = async () => { await persist({ ...store, custom: null }); setNotice("Modifications annulées : retour aux binds du jeu."); setExported(null); };
+  const onExport = async () => {
+    setError(null);
+    const base = store.actionmapsPath ?? installs[0]?.actionmaps ?? null;
+    const dest = base ? mappingPathFor(base, "SC-Univers") : null;
+    if (!dest) { setError("Pour exporter, charge d'abord ton actionmaps.xml (bouton en haut) : il indique où Star Citizen est installé."); return; }
+    try {
+      const written = await writeMappingFile(dest, toMappingXml("SC-Univers", effective, actionmaps?.joysticks ?? []));
+      setExported(written);
+    } catch (e) { setError(String(e)); }
+  };
+
   const select = (id: string) => { setSelId(id); setZoomed(true); setDetecting(false); resetHit(); };
   const finish = () => { setZoomed(false); setPlacing(false); setDetecting(false); resetHit(); };
 
@@ -155,17 +190,20 @@ export function BindsPage() {
   const js = cfg?.jsSlot ?? 1;
   const has3d = !!device && (!!models[device.id] || !!buildDeviceModel(device.name));
   const view: "3d" | "image" = cfg?.view ?? (has3d ? "3d" : "image");
-  const byInput = useMemo(() => indexByInput(actionmaps?.bindings ?? []), [actionmaps]);
+  const byInput = useMemo(() => indexByInput(effective), [effective]);
+  const hasBinds = !!actionmaps || !!store.custom;
+  const changes = useMemo(() => diff(original, effective), [original, effective]);
+  const nChanges = store.custom ? diffCount(changes) : 0;
 
   const bindingsFor = useCallback((c: DeviceControl): { input: string; label: string; deduced: boolean; bindings: ScBinding[] }[] =>
     inputsForControl(js, c).map((s) => ({ ...s, bindings: byInput.get(s.input) ?? [] })), [js, byInput]);
 
   const actionFor = useCallback((c: DeviceControl): string => {
     const all = bindingsFor(c).flatMap((s) => s.bindings);
-    if (all.length === 0) return actionmaps ? "Non lié" : "—";
-    const first = actionLabel(all[0].action);
+    if (all.length === 0) return hasBinds ? "Non lié" : "—";
+    const first = actionLabel(all[0].action, all[0].actionmap);
     return all.length > 1 ? `${first} +${all.length - 1}` : first;
-  }, [bindingsFor, actionmaps]);
+  }, [bindingsFor, hasBinds]);
 
   const categoryFor = useCallback((c: DeviceControl): string => {
     const b = bindingsFor(c).flatMap((s) => s.bindings)[0];
@@ -228,7 +266,7 @@ export function BindsPage() {
           <section className="stat-grid" aria-label="Résumé">
             <Stat label="APPAREILS" value={String(devices.length).padStart(2, "0")} />
             <Stat label={`BOUTONS · AXES (${device?.name.toUpperCase() ?? ""})`} value={`${counts.buttons} · ${counts.axes}`} />
-            <Stat label="COMMANDES LIÉES" value={actionmaps ? String(totalBound) : "—"} amber />
+            <Stat label="COMMANDES LIÉES" value={hasBinds ? String(totalBound) : "—"} amber />
           </section>
 
           <SectionHead n="01" title="APPAREILS" />
@@ -316,17 +354,31 @@ export function BindsPage() {
 
                   {selSubs.length > 0 && (
                     <div className="sublist">
-                      {selSubs.map((s) => (
-                        <div className="it" key={s.input}>
-                          <span className="mono" style={{ fontSize: 12, letterSpacing: ".08em", color: "var(--amber)" }}>{s.label}</span>
-                          <span style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                            <span style={{ fontWeight: 600, fontSize: 15 }}>
-                              {s.bindings.length ? s.bindings.map((b) => actionLabel(b.action)).join(" · ") : (actionmaps ? "Non lié" : "—")}
+                      {selSubs.map((s) => {
+                        const sameMap = new Set(s.bindings.map((b) => b.actionmap)).size < s.bindings.length;
+                        return (
+                          <div className="it bind-row" key={s.input}>
+                            <span className="mono" style={{ fontSize: 12, letterSpacing: ".08em", color: "var(--amber)" }}>{s.label}</span>
+                            <span style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+                              {s.bindings.length === 0 && <span style={{ fontWeight: 600, fontSize: 15, color: "var(--muted)" }}>Non lié</span>}
+                              {s.bindings.map((b) => (
+                                <span key={`${b.actionmap}/${b.action}`} className="bind-chip">
+                                  <span style={{ minWidth: 0 }}>
+                                    <span className="bind-chip-name">{actionLabel(b.action, b.actionmap)}</span>
+                                    <span className="mono bind-chip-map">{actionmapLabel(b.actionmap)}{b.multiTap === 2 ? " · DOUBLE APPUI" : ""}</span>
+                                  </span>
+                                  <button type="button" className="bind-x" title="Retirer cette action de la touche" aria-label={`Retirer ${actionLabel(b.action, b.actionmap)}`} onClick={() => onUnassign(b)}>✕</button>
+                                </span>
+                              ))}
+                              <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                <span className="mono" style={{ fontSize: 11, color: "var(--cyan)" }}>{s.input}{s.deduced ? " (déduit)" : ""}</span>
+                                {sameMap && <span className="hud-chip" style={{ color: "var(--amber)" }} title="Deux actions du même groupe sur la même touche se déclenchent ensemble.">CONFLIT POSSIBLE</span>}
+                                <button type="button" className="btn sm" style={{ marginLeft: "auto" }} onClick={() => setPicker({ input: s.input, label: `${sel.name.toUpperCase()}${s.label !== sel.name.toUpperCase() ? " · " + s.label : ""}` })}>+ Assigner une action</button>
+                              </span>
                             </span>
-                            <span className="mono" style={{ fontSize: 11, color: "var(--cyan)" }}>{s.input}{s.deduced ? " (déduit)" : ""}</span>
-                          </span>
-                        </div>
-                      ))}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                   {selSubs.some((s) => s.deduced) && <div className="hint">Entrées « déduites » : ordre des directions ou nom d'axe supposés. Utilise la détection pour confirmer.</div>}
@@ -356,10 +408,42 @@ export function BindsPage() {
             </div>
           </section>
 
-          <SectionHead n="03" title="REGISTRE DES BINDS" />
+          <SectionHead n="03" title="GESTION DES TOUCHES" />
+          <section className="panel" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <div>
+                <div className="label">// {nChanges > 0 ? `${nChanges} MODIFICATION${nChanges > 1 ? "S" : ""} NON EXPORTÉE${nChanges > 1 ? "S" : ""}` : store.custom ? "BINDS PERSONNALISÉS · AUCUN ÉCART AVEC LE JEU" : "BINDS DU JEU · NON MODIFIÉS"}</div>
+                <div style={{ color: "var(--muted)", marginTop: 6, maxWidth: 820, lineHeight: 1.5 }}>
+                  Sélectionne une commande, puis « + Assigner une action » ou ✕ pour retirer. Tes changements restent dans l'application tant que tu ne les exportes pas ; <span className="mono">actionmaps.xml</span> n'est jamais modifié.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button type="button" className="btn" onClick={onResetBinds} disabled={!store.custom}>Annuler mes modifications</button>
+                <button type="button" className="btn primary" onClick={onExport} disabled={!isTauri || effective.length === 0}>▸ Exporter vers Star Citizen</button>
+              </div>
+            </div>
+            {notice && <div className="mono" style={{ fontSize: 12, color: "var(--green)" }}>✓ {notice}</div>}
+            {nChanges > 0 && (
+              <div className="sublist">
+                {changes.added.slice(0, 8).map((b) => <div key={"a" + b.actionmap + b.action} className="it" style={{ gridTemplateColumns: "90px minmax(0,1fr) auto" }}><span className="mono" style={{ color: "var(--green)", fontSize: 11 }}>+ AJOUT</span><span>{actionLabel(b.action, b.actionmap)}</span><span className="mono" style={{ color: "var(--cyan)", fontSize: 12 }}>{b.input}</span></div>)}
+                {changes.moved.slice(0, 8).map(({ from, to }) => <div key={"m" + to.actionmap + to.action} className="it" style={{ gridTemplateColumns: "90px minmax(0,1fr) auto" }}><span className="mono" style={{ color: "var(--amber)", fontSize: 11 }}>⇄ DÉPLACÉ</span><span>{actionLabel(to.action, to.actionmap)}</span><span className="mono" style={{ color: "var(--cyan)", fontSize: 12 }}>{from.input} ▸ {to.input}</span></div>)}
+                {changes.removed.slice(0, 8).map((b) => <div key={"r" + b.actionmap + b.action} className="it" style={{ gridTemplateColumns: "90px minmax(0,1fr) auto" }}><span className="mono" style={{ color: "var(--red, #ff6b5e)", fontSize: 11 }}>− RETRAIT</span><span>{actionLabel(b.action, b.actionmap)}</span><span className="mono" style={{ color: "var(--dim)", fontSize: 12 }}>{b.input}</span></div>)}
+                {nChanges > 24 && <div className="hint" style={{ margin: 0 }}>… et d'autres modifications.</div>}
+              </div>
+            )}
+            {exported && (
+              <Note tag="✓ EXPORTÉ" info>
+                Profil écrit : <span className="mono">{exported}</span><br />
+                En jeu : <b>Options ▸ Raccourcis clavier ▸ Personnalisation avancée des commandes ▸ Profils de contrôle</b>, choisis <b>SC-Univers</b>, coche tes joysticks, puis charge. Alternative : console (touche <span className="mono">²</span>) et <span className="mono">pp_RebindKeys SC-Univers</span>. Avant le premier essai, enregistre ton profil actuel dans ce même menu : tu pourras revenir en arrière en un clic.
+              </Note>
+            )}
+            {!actionmaps && <div className="hint" style={{ margin: 0 }}>Sans <span className="mono">actionmaps.xml</span> chargé, tu pars d'une feuille blanche : seuls les binds que tu ajoutes ici seront exportés, les autres commandes joystick reviendront aux valeurs par défaut du jeu.</div>}
+          </section>
+
+          <SectionHead n="04" title="REGISTRE DES BINDS" />
           <section className="panel" aria-label="Liste des binds" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <div className="label">// JS{js} — {device?.name.toUpperCase()}{!actionmaps && " — CHARGE ACTIONMAPS.XML POUR VOIR LES FONCTIONS"}</div>
+              <div className="label">// JS{js} — {device?.name.toUpperCase()}{!hasBinds && " — CHARGE ACTIONMAPS.XML POUR VOIR TES FONCTIONS"}</div>
               <div role="group" aria-label="Filtrer par catégorie" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {cats.map((k) => <button key={k} type="button" className={"tab" + (cat === k ? " active" : "")} aria-pressed={cat === k} onClick={() => setCat(k)}>{k}</button>)}
               </div>
@@ -385,6 +469,7 @@ export function BindsPage() {
           </section>
         </>
       )}
+      {picker && <ActionPicker input={picker.input} controlLabel={picker.label} isAxis={isAxisInput(picker.input)} bindings={effective} onPick={onAssign} onClose={() => setPicker(null)} />}
     </>
   );
 }

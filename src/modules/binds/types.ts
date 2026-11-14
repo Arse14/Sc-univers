@@ -52,6 +52,8 @@ export interface ScBinding {
   action: string;      // "v_weapon_launch_missile"
   activationMode?: string;
   multiTap?: number;
+  /** Bind vidé par le joueur (`input="js1_ "`) : l'action n'a plus de touche joystick, même pas celle par défaut. */
+  cleared?: boolean;
 }
 
 export interface ScJoystickOption {

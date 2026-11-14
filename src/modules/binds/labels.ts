@@ -6,6 +6,8 @@
  * les actions fréquentes et le reste est « humanisé » à partir du nom brut.
  */
 
+import { findAction, MAP_BY_NAME } from "./actions";
+
 const ACTIONS: Record<string, string> = {
   // Vol
   v_pitch: "Tangage", v_yaw: "Lacet", v_roll: "Roulis",
@@ -91,11 +93,14 @@ const ACTIONMAPS: Record<string, string> = {
   default: "Général",
 };
 
-export function actionLabel(action: string): string {
+export function actionLabel(action: string, actionmap?: string): string {
+  // Libellé du jeu (traduction FR communautaire) quand l'action est au catalogue.
+  const official = findAction(action, actionmap);
+  if (official) return official.label;
   if (ACTIONS[action]) return ACTIONS[action];
   return action.replace(/^v_/, "").replace(/^pl_/, "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export function actionmapLabel(actionmap: string): string {
-  return ACTIONMAPS[actionmap] ?? actionmap.replace(/_/g, " ");
+  return ACTIONMAPS[actionmap] ?? MAP_BY_NAME.get(actionmap)?.label ?? actionmap.replace(/_/g, " ");
 }

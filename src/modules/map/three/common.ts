@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { pixelRatio } from "../../../lib/three-utils";
 
 /** Étiquette texte (canvas → sprite), style HUD : fond sombre, texte clair, option de couleur d'accent. */
 export function makeLabel(text: string, opts: { color?: string; size?: number; box?: boolean; sub?: string } = {}): THREE.Sprite {
@@ -91,7 +92,7 @@ export function flyTo(camera: THREE.PerspectiveCamera, controls: OrbitControls, 
 /** Renderer et caméra standards pour les vues carte. */
 export function makeRenderer(host: HTMLElement) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(pixelRatio());
   renderer.setSize(host.clientWidth, host.clientHeight);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;

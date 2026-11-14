@@ -166,6 +166,8 @@ export async function loadSource(def: SourceDef): Promise<SourceResult> {
       const text = await getText(url);
       const items = def.parse(text, url).filter((it) => it.title && it.url);
       items.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+      // On ne garde que le récent : le flux de statut remonte des centaines d'incidents anciens.
+      items.length = Math.min(items.length, def.id === "status" ? 12 : 40);
       return { source: def.id, items, error: null, fetchedAt: new Date().toISOString() };
     } catch (e) {
       lastErr = e instanceof Error ? e.message : String(e);

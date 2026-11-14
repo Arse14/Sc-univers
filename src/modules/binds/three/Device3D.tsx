@@ -6,6 +6,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { HOVER_EMISSIVE, SELECT_EMISSIVE } from "./materials";
 import { ANCHOR_LABELS, anchorNameFor, buildDeviceModel } from "./models";
 import { loadStore } from "../../../lib/tauri";
+import { destroyRenderer, disposeScene, pixelRatio, renderLoop } from "../../../lib/three-utils";
 
 export interface Anchor3D { x: number; y: number; z: number }
 
@@ -59,7 +60,7 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
   useEffect(() => {
     const el = mount.current!;
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(pixelRatio());
     renderer.setSize(W, H);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -175,9 +176,9 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
     // Boucle de rendu
     const clock = new THREE.Clock();
     const tmp = new THREE.Vector3();
-    const loop = () => {
-      const s = state.current!;
-      s.raf = requestAnimationFrame(loop);
+    const frame = () => {
+      const s = state.current;
+      if (!s) return;
       const t = clock.getElapsedTime();
       if (s.tween) {
         const k = Math.min(1, (performance.now() - s.tween.start) / s.tween.dur);
@@ -217,16 +218,17 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
       }
       renderer.render(scene, camera);
     };
-    loop();
+    // Rendu suspendu quand la vue n'est pas visible (fenêtre réduite, défilement).
+    const stopLoop = renderLoop(el, frame);
 
     return () => {
-      cancelAnimationFrame(state.current!.raf);
+      stopLoop();
       renderer.domElement.removeEventListener("mousemove", onMove);
       renderer.domElement.removeEventListener("mousedown", onDown);
       renderer.domElement.removeEventListener("mouseup", onUp);
       controls.dispose();
-      renderer.dispose();
-      el.removeChild(renderer.domElement);
+      disposeScene(scene);
+      destroyRenderer(renderer);
       state.current = null;
     };
   }, []);
@@ -239,7 +241,7 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
     setReady(false);
     const install = (model: THREE.Group) => {
       if (cancelled || !state.current) return;
-      if (s.model) s.scene.remove(s.model);
+      if (s.model) { s.scene.remove(s.model); disposeScene(s.model); }
       model.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       s.scene.add(model);
       s.model = model;

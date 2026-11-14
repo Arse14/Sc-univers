@@ -1,21 +1,18 @@
 import { useEffect, useState } from "react";
 import { PageHeader, SectionHead, Note } from "../../components/Hud";
-import { findScInstalls, isTauri, loadStore, saveStore, type ScInstall } from "../../lib/tauri";
+import { cacheClear, cacheInfo, findScInstalls, isTauri, loadStore, saveStore, type ScInstall } from "../../lib/tauri";
 import { checkForUpdate, installUpdate } from "../../lib/updater";
 import { APP_VERSION } from "../../lib/version";
+import { DEFAULT_SETTINGS, type AppSettings } from "./defaults";
+export { DEFAULT_SETTINGS, type AppSettings };
 
-export interface AppSettings {
-  uexToken: string;          // clé API UEX (saisie par l'utilisateur, stockée en local)
-  startModule: "news" | "dashboard" | "binds";
-  autoRotate: boolean;
-  autoUpdate: boolean;
-}
 
 const KEY = "settings";
-export const DEFAULT_SETTINGS: AppSettings = { uexToken: "", startModule: "news", autoRotate: true, autoUpdate: true };
 
 export function SettingsPage() {
   const [s, setS] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [cache, setCache] = useState<{ files: number; bytes: number } | null>(null);
+  useEffect(() => { cacheInfo().then(setCache).catch(() => undefined); }, []);
   const [checking, setChecking] = useState(false);
   const [updMsg, setUpdMsg] = useState<string | null>(null);
   const checkNow = async () => {
@@ -96,6 +93,13 @@ export function SettingsPage() {
           <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <button type="button" className="btn sm" onClick={checkNow} disabled={checking || !isTauri}>{checking ? "Vérification…" : "Vérifier maintenant"}</button>
             {updMsg && <span className="mono" style={{ fontSize: 11, color: "var(--muted)" }}>{updMsg}</span>}
+          </span>
+        </div>
+        <div className="field" style={{ justifyContent: "flex-end" }}>
+          <span className="label">MODÈLES 3D EN CACHE</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span className="mono" style={{ fontSize: 12 }}>{cache ? `${cache.files} fichier(s) · ${(cache.bytes / 1048576).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Mo` : "—"}</span>
+            <button type="button" className="btn sm" disabled={!cache || cache.files === 0} onClick={() => cacheClear().then(cacheInfo).then(setCache)}>Vider</button>
           </span>
         </div>
         <div className="field" style={{ justifyContent: "flex-end" }}>

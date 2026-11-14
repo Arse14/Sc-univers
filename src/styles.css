@@ -571,3 +571,62 @@ body {
 .update-banner .upd-notes{color:var(--muted)}
 .upd-progress{position:relative;min-width:260px;padding:8px 12px;border:1px solid var(--line);font-size:11px;letter-spacing:.14em;color:var(--text-bright);overflow:hidden}
 .upd-progress i{position:absolute;left:0;top:0;bottom:0;background:rgba(79,179,255,.22);transition:width .3s ease}
+
+/* ===== Binds : gestion des touches ============================ */
+.bind-row{align-items:flex-start!important}
+.bind-chip{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 8px 7px 12px;background:rgba(79,179,255,.08);border:1px solid var(--line);border-left:2px solid var(--rsi)}
+.bind-chip-name{display:block;font-weight:600;font-size:14px;color:var(--text-bright);overflow:hidden;text-overflow:ellipsis}
+.bind-chip-map{display:block;font-size:10px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+.bind-x{flex:none;width:26px;height:26px;border:1px solid var(--line);background:none;color:var(--muted);cursor:pointer;font-size:12px}
+.bind-x:hover{color:#fff;border-color:#ff6b5e;background:rgba(255,107,94,.18)}
+.picker-backdrop{position:fixed;inset:0;z-index:60;background:rgba(3,9,15,.72);backdrop-filter:blur(3px);display:grid;place-items:center;padding:24px;animation:pagein .25s ease both}
+.picker{width:min(980px,100%);max-height:min(86vh,900px);display:flex;flex-direction:column;gap:14px;background:rgba(8,26,40,.97)!important}
+.picker-search{padding:12px 14px;background:rgba(6,20,32,.8);border:1px solid var(--line);color:var(--text-bright);font:inherit;font-size:16px;outline:none}
+.picker-search:focus{border-color:var(--rsi)}
+.picker-list{flex:1;min-height:200px;overflow-y:auto;border:1px solid var(--line);display:flex;flex-direction:column}
+.picker-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 12px;text-align:left;background:none;border:0;border-bottom:1px solid rgba(94,193,255,.08);color:var(--text);font:inherit;cursor:pointer}
+.picker-row:hover:not(:disabled){background:rgba(79,179,255,.12)}
+.picker-row.here{opacity:.55;cursor:default}
+.picker-name{display:block;font-weight:600;font-size:15px;color:var(--text-bright)}
+.picker-meta{display:block;font-size:10px;letter-spacing:.08em;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.picker-tags{display:flex;gap:6px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+
+/* ===== Hangar : flottes, fiche, visionneuse 3D ================ */
+.fleet-input{padding:9px 12px;background:rgba(6,20,32,.6);border:1px solid var(--line);color:var(--text-bright);font:inherit;font-size:14px;outline:none;min-height:38px}
+.fleet-input:focus{border-color:var(--rsi)}
+.card-hit{all:unset;display:block;cursor:pointer}
+.card-hit:disabled{cursor:default}
+.card-hit:focus-visible{outline:2px solid var(--rsi);outline-offset:-2px}
+.ship-edit{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid var(--line);background:rgba(6,20,32,.5)}
+.ship-edit label{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ship-edit input,.ship-edit select{padding:7px 9px;background:rgba(6,20,32,.7);border:1px solid var(--line);color:var(--text-bright);font:inherit;font-size:13px;min-width:0;width:100%}
+.ship-edit input:focus,.ship-edit select:focus{border-color:var(--rsi);outline:none}
+.sheet-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:1250px){.sheet-grid{grid-template-columns:1fr}}
+.ship-viewer{position:relative;height:480px;border:1px solid var(--line);overflow:hidden;background:radial-gradient(80% 70% at 50% 45%,#0e2c45 0%,#061420 60%,#03090f 100%)}
+.ship-canvas{position:absolute;inset:0;cursor:grab}
+.ship-canvas:active{cursor:grabbing}
+.ship-canvas canvas{display:block;width:100%!important;height:100%!important}
+.ship-viewer-empty,.ship-overlay{display:grid;place-items:center;text-align:center}
+.ship-overlay{position:absolute;inset:0;pointer-events:none;background:rgba(6,20,32,.55)}
+.ship-viewer-empty img,.ship-overlay img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.5}
+.ship-viewer-empty span,.ship-overlay span{position:relative;font-size:11px;letter-spacing:.18em;color:var(--text-bright);background:rgba(6,20,32,.8);padding:8px 14px;max-width:80%;line-height:1.6}
+.ship-tools{position:absolute;left:10px;right:10px;top:10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;pointer-events:none}
+.ship-tools>*{pointer-events:auto}
+.ship-tools .tab{min-height:30px;padding:3px 10px;font-size:11px}
+.ship-tools .tab:not(.active){background:rgba(6,20,32,.75)}
+.ship-foot{position:absolute;left:12px;bottom:10px;font-size:10px;letter-spacing:.16em;color:var(--dim);pointer-events:none}
+.view-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.view-strip .pic{border:1px solid var(--line)}
+.spec-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start}
+.spec-block{border:1px solid var(--line);padding:12px 14px;min-width:0}
+.spec-rows{display:flex;flex-direction:column;margin-top:8px}
+.spec-row{display:flex;justify-content:space-between;gap:14px;padding:5px 0;border-bottom:1px solid rgba(94,193,255,.08);font-size:14px}
+.spec-row:last-child{border-bottom:0}
+.spec-row span{color:var(--muted);min-width:0}
+.spec-row b{font-weight:600;color:var(--text-bright);text-align:right;font-variant-numeric:tabular-nums}
+.fit-list{display:flex;flex-direction:column;margin-top:8px}
+.fit-row{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 10px;border-bottom:1px solid rgba(94,193,255,.08)}
+.fit-size{flex:none;width:30px;font-size:11px;color:var(--rsi)}
+.fit-name{display:block;font-weight:600;font-size:14px;color:var(--text-bright)}
+.fit-meta{display:block;font-size:10px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}

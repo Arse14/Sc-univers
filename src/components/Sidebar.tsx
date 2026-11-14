@@ -20,8 +20,8 @@ const ITEMS: Item[] = [
   { id: "mining", label: "Minage", ready: true, group: "univers" },
   { id: "reputation", label: "Réputations", ready: true, group: "univers" },
   { id: "blueprints", label: "Schémas", ready: true, group: "univers" },
-  { id: "market", label: "Marché", ready: false, group: "univers" },
-  { id: "equipment", label: "Équipement", ready: false, group: "univers" },
+  { id: "market", label: "Marché", ready: true, group: "univers" },
+  { id: "equipment", label: "Équipement", ready: true, group: "univers" },
   { id: "map", label: "Carte", ready: true, group: "univers" },
   { id: "settings", label: "Paramètres", ready: true, group: "systeme" },
 ];
@@ -72,7 +72,7 @@ export function Sidebar({ current, onSelect }: { current: ModuleId; onSelect: (m
 
       <div className="status-box">
         <div className="label">// ÉTAT</div>
-        <div style={{ fontWeight: 600, fontSize: 15 }}><span className="status-dot" />Lecture de fichiers uniquement</div>
+        <div style={{ fontWeight: 600, fontSize: 15 }}><span className="status-dot" />Aucune modification du jeu</div>
         <div className="telemetry"><span>UEE STD</span><b>{clock.utc} · {clock.year}</b></div>
         <div className="mono" style={{ fontSize: 12, color: "var(--dimmer)" }}>v{APP_VERSION} · NON AFFILIÉ À CIG</div>
         <div className="status-bar" />

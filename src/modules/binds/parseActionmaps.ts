@@ -18,7 +18,7 @@
  */
 import type { ActionMaps, ScBinding, ScJoystickOption } from "./types";
 
-const JS_INPUT = /^js(\d+)_(.+)$/i;
+const JS_INPUT = /^js(\d+)_(.*)$/i;
 
 export function parseActionmaps(xml: string): ActionMaps {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
@@ -42,10 +42,12 @@ export function parseActionmaps(xml: string): ActionMaps {
         const input = (rb.getAttribute("input") ?? "").trim();
         const m = JS_INPUT.exec(input);
         if (!m) return;
+        const element = m[2].trim().toLowerCase();
         bindings.push({
-          input: input.toLowerCase(),
+          input: `js${m[1]}_${element}`,
           js: Number(m[1]),
-          element: m[2].toLowerCase(),
+          element,
+          cleared: element === "" || undefined,
           actionmap,
           action,
           activationMode: rb.getAttribute("activationMode") ?? undefined,
@@ -62,6 +64,7 @@ export function parseActionmaps(xml: string): ActionMaps {
 export function indexByInput(bindings: ScBinding[]): Map<string, ScBinding[]> {
   const map = new Map<string, ScBinding[]>();
   for (const b of bindings) {
+    if (b.cleared) continue;
     const list = map.get(b.input) ?? [];
     list.push(b);
     map.set(b.input, list);

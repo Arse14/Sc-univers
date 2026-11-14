@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { CelestialObject, StarSystem } from "../types";
+import { destroyRenderer, disposeScene, renderLoop } from "../../../lib/three-utils";
 import { makeLabel, sizeLabel, glowTexture, starField, flyTo, makeRenderer } from "./common";
 
 interface Props {
@@ -288,13 +289,13 @@ export function SystemView({ system, objects, selected, onHover, onSelect, flyRe
     };
     api.current = { fly, setSelected: (id) => { selectedId = id; applySel(); }, setAuto: (v) => { controls.autoRotate = v; } };
 
-    let raf = 0; let t = 0;
-    const loop = () => {
-      raf = requestAnimationFrame(loop); t += 0.016;
+    let t = 0;
+    const stopLoop = renderLoop(el, (dt) => {
+      t += dt;
       controls.update();
       fill.position.copy(camera.position);
       const dist = camera.position.distanceTo(controls.target);
-      for (const s of spinners) s.rotation.y += 0.0025;
+      for (const s of spinners) s.rotation.y += dt * 0.15;
       starHalo.scale.setScalar(15 + Math.sin(t * 1.3) * 0.8);
       sizeLabel(starLabel, camera, 0.03);
       for (const { sp, o, minor } of labels) {
@@ -305,15 +306,14 @@ export function SystemView({ system, objects, selected, onHover, onSelect, flyRe
       }
       if (selRing.visible) { selRing.lookAt(camera.position); selRing.rotation.z = t * 0.6; }
       renderer.render(scene, camera);
-    };
-    loop();
+    });
 
     const ro = new ResizeObserver(() => { const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); });
     ro.observe(el);
     return () => {
-      cancelAnimationFrame(raf); ro.disconnect(); cancelFly?.();
+      stopLoop(); ro.disconnect(); cancelFly?.();
       renderer.domElement.removeEventListener("pointermove", onMove); renderer.domElement.removeEventListener("pointerdown", onDown); renderer.domElement.removeEventListener("pointerup", onUp);
-      controls.dispose(); renderer.dispose(); el.innerHTML = ""; api.current = null;
+      controls.dispose(); disposeScene(scene); glow.dispose(); destroyRenderer(renderer); el.innerHTML = ""; api.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [system.code, objects]);

@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import type { StarSystem, JumpPoint } from "../types";
 import { PLAYABLE } from "../types";
+import { destroyRenderer, disposeScene, renderLoop } from "../../../lib/three-utils";
 import { makeLabel, sizeLabel, glowTexture, starField, flyTo, makeRenderer } from "./common";
 
 /** Coordonnées Starmap (x, y, z) → scène (x à droite, z vers le haut). */
@@ -177,10 +178,9 @@ export function GalaxyView({ systems, jumps, selected, hidden, showJumps, onHove
     };
 
     // ----- boucle -----
-    let raf = 0; let t = 0;
-    const loop = () => {
-      raf = requestAnimationFrame(loop);
-      t += 0.016;
+    let t = 0;
+    const stopLoop = renderLoop(el, (dt) => {
+      t += dt;
       controls.update();
       const dist = camera.position.distanceTo(controls.target);
       for (const n of nodes.values()) {
@@ -194,8 +194,7 @@ export function GalaxyView({ systems, jumps, selected, hidden, showJumps, onHove
       }
       if (selRing.visible) { selRing.lookAt(camera.position); selRing.rotation.z = t * 0.6; }
       renderer.render(scene, camera);
-    };
-    loop();
+    });
 
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth, h = el.clientHeight; if (!w || !h) return;
@@ -204,11 +203,11 @@ export function GalaxyView({ systems, jumps, selected, hidden, showJumps, onHove
     ro.observe(el);
 
     return () => {
-      cancelAnimationFrame(raf); ro.disconnect(); cancelFly?.();
+      stopLoop(); ro.disconnect(); cancelFly?.();
       renderer.domElement.removeEventListener("pointermove", onMove);
       renderer.domElement.removeEventListener("pointerdown", onDown);
       renderer.domElement.removeEventListener("pointerup", onUp);
-      controls.dispose(); renderer.dispose(); el.innerHTML = "";
+      controls.dispose(); disposeScene(scene); glow.dispose(); destroyRenderer(renderer); el.innerHTML = "";
       api.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

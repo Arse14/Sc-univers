@@ -1,0 +1,25 @@
+/* Marché et Équipement : compléments aux classes du thème (préfixe mk-). */
+.mk-scroll { overflow-x: auto; }
+.mk-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.mk-filters .field { flex: 1 1 180px; min-width: 0; }
+.mk-filters .field.narrow { flex: 0 1 170px; }
+.mk-filters .field .label { letter-spacing: .2em; }
+.mk-check { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.mk-check input { width: 16px; height: 16px; accent-color: var(--rsi); }
+.mk-sort { padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; text-transform: uppercase; }
+.mk-sort:hover, .mk-sort.on { color: var(--rsi); }
+.mk-sort.r, .mk-r { text-align: right; justify-self: end; }
+.mk-num { font-family: var(--font-mono); font-size: 14px; text-align: right; white-space: nowrap; }
+.mk-tag { display: inline-block; margin-left: 8px; padding: 0 6px; border: 1px solid currentColor; font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; line-height: 16px; vertical-align: middle; color: var(--dim); }
+.mk-tag.warn { color: var(--amber); }
+.mk-tag.cyan { color: var(--cyan); }
+.mk-where { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mk-where b { font-weight: 600; font-size: 15px; color: var(--text-bright); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-where small { font-family: var(--font-mono); font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mk-old { color: var(--amber); }
+.mk-list { max-height: 420px; overflow-y: auto; }
+.mk-list .it { min-height: 44px; }
+.mk-split { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+.mk-cats { display: flex; flex-wrap: wrap; gap: 8px; }
+.mk-attrs { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 20px; }
+.mk-status { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }

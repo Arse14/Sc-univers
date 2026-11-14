@@ -56,7 +56,8 @@ export async function loadStore<T>(name: string): Promise<T | null> {
 }
 
 export async function saveStore<T>(name: string, value: T): Promise<void> {
-  const content = JSON.stringify(value, null, 2);
+  // JSON compact : les caches (catalogue, prix) pèsent vite plusieurs Mo, l'indentation les doublerait.
+  const content = JSON.stringify(value);
   if (!isTauri) {
     try { localStorage.setItem("sc-univers:" + name, content); } catch { /* ignoré */ }
     return;
@@ -69,4 +70,44 @@ export async function pickFile(filters: { name: string; extensions: string[] }[]
   if (!isTauri) return null;
   const res = await open({ multiple: false, directory: false, filters });
   return typeof res === "string" ? res : null;
+}
+
+export async function deleteStore(name: string): Promise<void> {
+  if (!isTauri) { try { localStorage.removeItem("sc-univers:" + name); } catch { /* ignoré */ } return; }
+  await invoke("delete_store", { name });
+}
+
+/** Écrit un profil de contrôle dans `controls/mappings` de Star Citizen. Renvoie le chemin écrit. */
+export async function writeMappingFile(path: string, content: string): Promise<string> {
+  if (!isTauri) throw new Error("Écriture de fichier indisponible hors de l'application.");
+  return invoke<string>("write_mapping_file", { path, content });
+}
+
+/* ---------- cache disque binaire (modèles 3D) ---------- */
+
+/**
+ * Renvoie le contenu de `url`, depuis le cache disque s'il y est, sinon en le
+ * téléchargeant (par morceaux côté Rust) puis en le relisant. Hors de
+ * l'application : simple téléchargement, sans cache.
+ */
+export async function cachedBinary(url: string, key: string, onStage?: (s: "cache" | "download") => void): Promise<ArrayBuffer> {
+  if (!isTauri) {
+    onStage?.("download");
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.arrayBuffer();
+  }
+  const size = await invoke<number>("cache_has", { key });
+  if (!size) { onStage?.("download"); await invoke<number>("cache_download", { url, key }); }
+  else onStage?.("cache");
+  return invoke<ArrayBuffer>("cache_get", { key });
+}
+
+export async function cacheInfo(): Promise<{ files: number; bytes: number }> {
+  if (!isTauri) return { files: 0, bytes: 0 };
+  return invoke<{ files: number; bytes: number }>("cache_info");
+}
+
+export async function cacheClear(): Promise<void> {
+  if (isTauri) await invoke("cache_clear");
 }
