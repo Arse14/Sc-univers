@@ -9,7 +9,7 @@ import { useGamepadDetect } from "./useGamepad";
 import { ActionPicker } from "./ActionPicker";
 import type { ScAction } from "./actions";
 import { assign, diff, diffCount, isAxisInput, mappingPathFor, toMappingXml, unassign } from "./profile";
-import { CATALOG, catalogDevice, catalogEntryOf, catalogId, isCatalogId } from "./catalog";
+import { CATALOG, KIND_FR, catalogDevice, catalogEntryOf, catalogId, isCatalogId } from "./catalog";
 import { SAMPLE_X56_PR0 } from "./samplePr0";
 import { DeviceView } from "./DeviceView";
 import { Device3D, type Anchor3D } from "./three/Device3D";
@@ -325,7 +325,7 @@ export function BindsPage() {
               <select value={toAdd} onChange={(e) => setToAdd(e.target.value)}>
                 {[...new Set(CATALOG.map((e) => e.brand))].map((b) => (
                   <optgroup key={b} label={b}>
-                    {CATALOG.filter((e) => e.brand === b).map((e) => <option key={e.key} value={e.key}>{e.brand} {e.name} — {e.kind === "stick" ? "manche" : "manette des gaz"}</option>)}
+                    {CATALOG.filter((e) => e.brand === b).map((e) => <option key={e.key} value={e.key}>{e.brand} {e.name} — {KIND_FR[e.kind]}</option>)}
                   </optgroup>
                 ))}
               </select>
@@ -334,7 +334,7 @@ export function BindsPage() {
             {device && isCatalogId(device.id) && <button type="button" className="btn sm" onClick={() => removeCatalog(device.id)}>Retirer {device.name}</button>}
             <div className="hint" style={{ flexBasis: "100%" }}>
               {device && isCatalogId(device.id)
-                ? <>{catalogEntryOf(device.id)?.note} Modèle 3D reconstruit sans photo de référence : les proportions sont approchées.</>
+                ? <>{catalogEntryOf(device.id)?.sure ? "Numérotation d'usine relevée par la communauté." : "Numérotation indicative (cet appareil se reprogramme ou n'est pas documenté) : vérifie avec la détection de touche."} Modèle 3D schématique.</>
                 : <>Pas de X56 ? Ajoute ton manche et ta manette des gaz ici, sans profil constructeur. Ajouter deux fois le même manche donne un double manche (un slot js chacun).</>}
             </div>
           </div>
