@@ -5,6 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { HOVER_EMISSIVE, SELECT_EMISSIVE } from "./materials";
 import { ANCHOR_LABELS, anchorNameFor, buildDeviceModel } from "./models";
+import "./models-extra";
 import { loadStore } from "../../../lib/tauri";
 import { destroyRenderer, disposeScene, pixelRatio, renderLoop } from "../../../lib/three-utils";
 
@@ -251,7 +252,7 @@ export function Device3D({ deviceName, modelUrl, controls, anchors, selectedId, 
       model.updateMatrixWorld(true);
       const labels = new THREE.Group(); labels.name = "labels";
       s.anchorsByCtrl.forEach((obj, name) => {
-        const text = ANCHOR_LABELS[name]; if (!text) return;
+        const text = (obj.userData.label as string | undefined) ?? ANCHOR_LABELS[name]; if (!text) return;
         const box = new THREE.Box3().setFromObject(obj); const c = box.getCenter(new THREE.Vector3()); const size = box.getSize(new THREE.Vector3());
         const sp = makeLabelSprite(text);
         sp.position.copy(model.worldToLocal(c)); sp.position.y += Math.max(0.009, size.y * 0.6 + 0.005);

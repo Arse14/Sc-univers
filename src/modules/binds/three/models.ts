@@ -694,8 +694,20 @@ export function buildThrottle(): THREE.Group {
  * inverseurs 3 positions (SW 1/2, 3/4, 5/6), les familles Mode 1/2/3 et les
  * molettes à poussoir (Rotary 1 = F, Rotary 2 = G) partagent une ancre.
  */
+/** Commandes du catalogue qui partagent une même pièce du modèle. */
+const CATALOG_ALIAS: Record<string, string> = {
+  "Y Axis": "X Axis", "Mini-stick Y": "Mini-stick X", "Mini-stick appui": "Mini-stick X", "Gâchette cran 2": "Gâchette cran 1",
+  "Gâchette rapide arrière": "Gâchette rapide avant", "SW1 droite": "SW1 gauche", "SW1 appui": "SW1 gauche", "A1 appui": "A1",
+  "Molette bas": "Molette haut", "Molette appui": "Molette haut",
+};
+
+/** Modèles enregistrés par models-extra.ts (évite un import circulaire). */
+const EXTRA: { test: RegExp; build: () => THREE.Group }[] = [];
+export function registerModels(list: { test: RegExp; build: () => THREE.Group }[]) { EXTRA.push(...list); }
+
 export function anchorNameFor(controlName: string): string {
   const n = controlName.trim();
+  if (CATALOG_ALIAS[n]) return CATALOG_ALIAS[n];
   let m: RegExpExecArray | null;
   if ((m = /^TGL (\d) (Up|Down)$/i.exec(n))) return `TGL ${m[1]} Up`;
   if (/^K1 (Up|Down)$/i.test(n)) return "K1 Up";
@@ -720,7 +732,11 @@ export const ANCHOR_LABELS: Record<string, string> = {
 
 /** Choisit le modèle à partir du nom d'appareil du profil ("Stick", "Throttle"). */
 export function buildDeviceModel(deviceName: string): THREE.Group | null {
+  for (const e of EXTRA) if (e.test.test(deviceName)) return e.build();
   if (/stick|joystick|manche/i.test(deviceName)) return buildStick();
   if (/throttle|gaz/i.test(deviceName)) return buildThrottle();
   return null;
 }
+
+/** Outils partagés avec les autres modèles (models-extra.ts). */
+export const KIT = { mesh, rbox, chamferBox, profileX, at, cyl, knurledKnob, control, aluButton, blackHat, decal, litArc, loft };

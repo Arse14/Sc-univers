@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRef, useCallback, useEffect, useMemo, useState } from "react";
 import { PageHeader, SectionHead, Stat, Note } from "../../components/Hud";
 import { findScInstalls, importDeviceImage, importDeviceModel, isTauri, loadStore, pickFile, readFileAsDataUrl, readTextFile, saveStore, writeMappingFile, type ScInstall } from "../../lib/tauri";
 import { parsePr0, countControls } from "./parsePr0";
@@ -9,6 +9,7 @@ import { useGamepadDetect } from "./useGamepad";
 import { ActionPicker } from "./ActionPicker";
 import type { ScAction } from "./actions";
 import { assign, diff, diffCount, isAxisInput, mappingPathFor, toMappingXml, unassign } from "./profile";
+import { CATALOG, catalogDevice, catalogEntryOf, catalogId, isCatalogId } from "./catalog";
 import { SAMPLE_X56_PR0 } from "./samplePr0";
 import { DeviceView } from "./DeviceView";
 import { Device3D, type Anchor3D } from "./three/Device3D";
@@ -21,6 +22,8 @@ interface BindsStore {
   devices: Record<string, DeviceConfig>;
   /** Binds en cours d'édition dans l'application (null = ceux du jeu, non modifiés). */
   custom?: ScBinding[] | null;
+  /** Appareils ajoutés depuis le catalogue intégré (« cat:<clé>#<n> »). */
+  extra?: string[];
 }
 
 const EMPTY_STORE: BindsStore = { profilePath: null, actionmapsPath: null, devices: {} };
@@ -50,6 +53,8 @@ export function BindsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [exported, setExported] = useState<string | null>(null);
   const { hit, pads, reset: resetHit } = useGamepadDetect(detecting);
+  const profileDevs = useRef<Device[]>([]);
+  const [toAdd, setToAdd] = useState(CATALOG[0].key);
 
   // ----- chargement initial -----
   useEffect(() => {
@@ -76,11 +81,13 @@ export function BindsPage() {
     const text = path === "sample:x56" ? SAMPLE_X56_PR0 : await readTextFile(path);
     const devs = parsePr0(text);
     if (devs.length === 0) throw new Error("Aucun appareil trouvé dans ce profil.");
-    setDevices(devs);
+    profileDevs.current = devs;
+    const extra = (base.extra ?? []).map(catalogDevice).filter((d): d is Device => !!d);
+    setDevices([...devs, ...extra]);
     setDevId(devs[0].id);
     setSelId(devs[0].controls[0]?.id ?? null);
     const cfg = { ...base.devices };
-    devs.forEach((d, i) => { if (!cfg[d.id]) cfg[d.id] = defaultConfig(i); });
+    [...devs, ...extra].forEach((d, i) => { if (!cfg[d.id]) cfg[d.id] = defaultConfig(i); });
     await persist({ ...base, profilePath: path, devices: cfg });
     // images déjà importées
     for (const d of devs) {
@@ -89,6 +96,25 @@ export function BindsPage() {
       const mp = cfg[d.id]?.modelPath;
       if (mp) readFileAsDataUrl(mp).then((url) => setModels((m) => ({ ...m, [d.id]: url }))).catch(() => undefined);
     }
+  }
+
+  /** Ajoute un appareil du catalogue (deux fois le même = double manche). */
+  async function addCatalog(key: string) {
+    const used = new Set(store.extra ?? []);
+    let n = 1; while (used.has(catalogId(key, n))) n++;
+    const id = catalogId(key, n);
+    const dev = catalogDevice(id); if (!dev) return;
+    const all = [...devices, dev];
+    const slots = new Set(devices.map((d) => store.devices[d.id]?.jsSlot));
+    let slot = 1; while (slots.has(slot) && slot < 8) slot++;
+    setDevices(all); setDevId(id); setSelId(dev.controls[0]?.id ?? null);
+    await persist({ ...store, extra: [...(store.extra ?? []), id], devices: { ...store.devices, [id]: { ...defaultConfig(0), jsSlot: slot } } });
+  }
+  async function removeCatalog(id: string) {
+    const rest = devices.filter((d) => d.id !== id);
+    setDevices(rest); setDevId(rest[0]?.id ?? null); setSelId(rest[0]?.controls[0]?.id ?? null);
+    const cfg = { ...store.devices }; delete cfg[id];
+    await persist({ ...store, extra: (store.extra ?? []).filter((x) => x !== id), devices: cfg });
   }
 
   async function loadActionmaps(path: string) {
@@ -291,6 +317,26 @@ export function BindsPage() {
                 </select>
               </div>
             )}
+          </div>
+
+          <div className="panel small" style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+            <label className="field" style={{ flex: "1 1 260px", minWidth: 0 }}>
+              <span className="label">AJOUTER UN APPAREIL DU CATALOGUE</span>
+              <select value={toAdd} onChange={(e) => setToAdd(e.target.value)}>
+                {[...new Set(CATALOG.map((e) => e.brand))].map((b) => (
+                  <optgroup key={b} label={b}>
+                    {CATALOG.filter((e) => e.brand === b).map((e) => <option key={e.key} value={e.key}>{e.brand} {e.name} — {e.kind === "stick" ? "manche" : "manette des gaz"}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="btn" onClick={() => addCatalog(toAdd)}>Ajouter</button>
+            {device && isCatalogId(device.id) && <button type="button" className="btn sm" onClick={() => removeCatalog(device.id)}>Retirer {device.name}</button>}
+            <div className="hint" style={{ flexBasis: "100%" }}>
+              {device && isCatalogId(device.id)
+                ? <>{catalogEntryOf(device.id)?.note} Modèle 3D reconstruit sans photo de référence : les proportions sont approchées.</>
+                : <>Pas de X56 ? Ajoute ton manche et ta manette des gaz ici, sans profil constructeur. Ajouter deux fois le même manche donne un double manche (un slot js chacun).</>}
+            </div>
           </div>
 
           <SectionHead n="02" title="VUE DE L'APPAREIL" />
