@@ -61,3 +61,28 @@
 .set-price { text-align: right; color: var(--text-bright); white-space: nowrap; padding-top: 14px; }
 .set-total { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .set-sub { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Points de vente : pastille de système, bouton dépliant, liste alignée */
+.sys-badge { display: inline-block; width: 74px; box-sizing: border-box; padding: 1px 7px; border: 1px solid var(--sc); color: var(--sc); background: color-mix(in srgb, var(--sc) 12%, transparent); font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; text-align: center; vertical-align: 1px; }
+.set-piece { grid-template-columns: 64px minmax(0, 1fr) auto; }
+.set-piece.open { background: rgba(79, 179, 255, .04); }
+.set-price { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; padding-top: 12px; text-align: right; }
+.set-price .mk-num { font-size: 16px; color: var(--text-bright); white-space: nowrap; }
+.more-btn { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--line); background: rgba(6, 20, 32, .6); color: var(--rsi); font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; cursor: pointer; transition: background .15s, border-color .15s; }
+.more-btn:hover { background: rgba(79, 179, 255, .14); border-color: var(--rsi); }
+.more-btn .chev { display: inline-block; transition: transform .18s ease; }
+.more-btn[aria-expanded="true"] { background: rgba(79, 179, 255, .18); border-color: var(--rsi); color: var(--text-bright); }
+.more-btn[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.offer-list { grid-column: 2 / -1; display: flex; flex-direction: column; border: 1px solid var(--line); border-left: 2px solid var(--rsi); background: rgba(4, 14, 23, .55); animation: offerin .18s ease both; }
+.offer-list.plain { border-left-color: var(--green); animation: none; }
+@keyframes offerin { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.offer-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto 110px; gap: 12px; align-items: center; padding: 7px 12px; font-size: 14px; }
+.offer-row + .offer-row { border-top: 1px solid rgba(98, 208, 255, .08); }
+.offer-row:nth-child(even) { background: rgba(79, 179, 255, .035); }
+.offer-row:hover { background: rgba(79, 179, 255, .09); }
+.offer-name { min-width: 0; color: var(--text-bright); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.offer-name small { font-weight: 400; font-size: 12px; color: var(--muted); }
+.offer-extra { font-family: var(--font-mono); font-size: 11px; color: var(--amber); white-space: nowrap; }
+.offer-extra.same { color: var(--green); }
+.offer-price { font-family: var(--font-mono); font-size: 14px; color: var(--text-bright); text-align: right; white-space: nowrap; }
+@media (max-width: 700px) { .offer-row { grid-template-columns: auto minmax(0, 1fr) auto; } .offer-extra { display: none; } }

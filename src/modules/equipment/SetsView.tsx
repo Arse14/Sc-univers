@@ -6,35 +6,60 @@ import { ItemThumb, useItemPic } from "./pics";
 import { SLOT_FR, loadArmorSets, oneStopShops, variantTotal, type ArmorSet, type Offer, type SetPiece, type SetsResult, type SetVariant } from "./sets";
 
 const SYSTEMS = ["Stanton", "Pyro", "Nyx"];
-const whereText = (o: Offer) => [o.sys, o.place || o.body].filter(Boolean).join(" ▸ ");
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+const SYS_COLOR: Record<string, string> = { Stanton: "#4fb3ff", Pyro: "#ff8a4c", Nyx: "#b58cff" };
+/** Pastille du système stellaire, de sa couleur. */
+function SysBadge({ sys }: { sys: string }) {
+  return <span className="sys-badge" style={{ ["--sc" as string]: SYS_COLOR[sys] ?? "#8fa3b3" }}>{sys || "?"}</span>;
+}
+
+/** Une ligne de point de vente : système, boutique, lieu, écart avec le moins cher, prix. */
+function OfferRow({ sys, name, where, price, base, old, tag }: { sys: string; name: string; where: string; price: number; base?: number; old?: string; tag?: string }) {
+  const extra = base != null && price > base ? price - base : 0;
+  return (
+    <div className="offer-row">
+      <SysBadge sys={sys} />
+      <span className="offer-name">{name}{where && <small> {where}</small>}{old && <small> · relevé {old}</small>}</span>
+      <span className={"offer-extra" + (extra > 0 ? "" : " same")}>{tag ?? (extra > 0 ? `+${nf(extra)}` : base != null ? "même prix" : "")}</span>
+      <span className="offer-price">{auec(price)}</span>
+    </div>
+  );
+}
+const placeOf = (o: Offer) => [o.place, o.body].filter((v, i, a) => v && a.indexOf(v) === i).join(" · ");
 
 function PieceRow({ p, sys }: { p: SetPiece; sys: string }) {
   const [open, setOpen] = useState(false);
   const offers = sys ? p.offers.filter((o) => o.sys === sys) : p.offers;
   const best = offers[0];
   return (
-    <div className="set-piece">
+    <div className={"set-piece" + (open ? " open" : "")}>
       <ItemThumb item={p.item} size={64} />
       <div style={{ minWidth: 0 }}>
         <div className="mono set-slot">{SLOT_FR[p.slot].toUpperCase()}</div>
         <div className="cell-main" style={{ fontSize: 15 }}>{p.item.name}</div>
         {best ? (
           <div className="set-where">
-            <b>{best.terminal}</b><span className="cell-muted"> · {whereText(best)}</span>
+            <SysBadge sys={best.sys} /> <b>{best.terminal}</b>{placeOf(best) && <span className="cell-muted"> · {placeOf(best)}</span>}
             {best.at > 0 && isOld(best.at) && <span className="cell-muted"> · relevé {age(best.at)}</span>}
           </div>
         ) : (
           <div className="set-where cell-muted">{p.offers.length ? `Pas vendu dans ${sys} : disponible dans ${[...new Set(p.offers.map((o) => o.sys))].join(", ")}` : "Aucune boutique relevée : butin, récompense ou objet de boutique RSI."}</div>
         )}
-        {offers.length > 1 && (
-          <button type="button" className="wk-more" aria-expanded={open} onClick={() => setOpen((v) => !v)}>{open ? "Réduire" : `${offers.length - 1} autre(s) point(s) de vente`}</button>
-        )}
-        {open && offers.slice(1).map((o, i) => (
-          <div className="kv" key={o.t + "-" + i}><span style={{ minWidth: 0 }}>{o.terminal}<small className="cell-muted"> · {whereText(o)}</small></span><span className="v mk-num">{auec(o.price)}</span></div>
-        ))}
       </div>
-      <div className="mk-num set-price">{best ? auec(best.price) : "—"}</div>
+      <div className="set-price">
+        <div className="mk-num">{best ? auec(best.price) : "—"}</div>
+        {offers.length > 1 && (
+          <button type="button" className="more-btn" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+            <span className="chev" aria-hidden="true">▸</span>{open ? "Masquer" : `${offers.length - 1} autre${offers.length > 2 ? "s" : ""} boutique${offers.length > 2 ? "s" : ""}`}
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="offer-list">
+          {offers.slice(1).map((o, i) => <OfferRow key={o.t + "-" + i} sys={o.sys} name={o.terminal} where={placeOf(o)} price={o.price} base={best.price} old={o.at > 0 && isOld(o.at) ? age(o.at) : undefined} />)}
+        </div>
+      )}
     </div>
   );
 }
@@ -89,8 +114,10 @@ function Detail({ set, sys }: { set: ArmorSet; sys: string }) {
 
       {shops.length > 0 && (
         <div>
-          <div className="label" style={{ color: "var(--green)", marginBottom: 6 }}>TOUT ACHETER AU MÊME ENDROIT · {shops.length}</div>
-          {shops.slice(0, 6).map((s) => <div className="kv" key={s.terminal}><span style={{ minWidth: 0 }}>{s.terminal}<small className="cell-muted"> · {[s.sys, s.where].filter(Boolean).join(" ▸ ")}</small></span><span className="v mk-num">{auec(s.total)}</span></div>)}
+          <div className="label" style={{ color: "var(--green)", marginBottom: 6 }}>TOUT ACHETER AU MÊME ENDROIT · {shops.length} BOUTIQUE{shops.length > 1 ? "S" : ""}</div>
+          <div className="offer-list plain">
+            {shops.slice(0, 8).map((x, i) => <OfferRow key={x.terminal} sys={x.sys} name={x.terminal} where={x.where} price={x.total} base={shops[0].total} tag={i === 0 ? "le moins cher" : undefined} />)}
+          </div>
         </div>
       )}
     </div>
