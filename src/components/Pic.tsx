@@ -6,8 +6,9 @@ import { useState, type CSSProperties, type ReactNode } from "react";
  * Les images viennent de sources publiques (wiki communautaire, Galactapedia
  * officielle) et sont chargées par l'app au moment de l'affichage.
  */
-export function Pic({ src, alt = "", ratio = "16 / 9", fit = "cover", className, style, children, dim = false, radius = 0 }: {
+export function Pic({ src: first, fallbackSrc, alt = "", ratio = "16 / 9", fit = "cover", className, style, children, dim = false, radius = 0 }: {
   src?: string | null;
+  fallbackSrc?: string | null;   // essayé si la première URL échoue
   alt?: string;
   ratio?: string | null;
   fit?: "cover" | "contain";
@@ -18,11 +19,13 @@ export function Pic({ src, alt = "", ratio = "16 / 9", fit = "cover", className,
   radius?: number;
 }) {
   const [ok, setOk] = useState<boolean | null>(null);
+  const [useAlt, setUseAlt] = useState(false);
+  const src = useAlt && fallbackSrc ? fallbackSrc : first;
   const failed = !src || ok === false;
   return (
     <div className={"pic" + (failed ? " pic-fallback" : "") + (className ? ` ${className}` : "")} style={{ aspectRatio: ratio ?? undefined, borderRadius: radius, ...style }}>
       {src && ok !== false && (
-        <img src={src} alt={alt} loading="lazy" decoding="async" onLoad={() => setOk(true)} onError={() => setOk(false)}
+        <img src={src} alt={alt} loading="lazy" decoding="async" onLoad={() => setOk(true)} onError={() => { if (!useAlt && fallbackSrc && fallbackSrc !== first) setUseAlt(true); else setOk(false); }}
           style={{ objectFit: fit, opacity: ok ? 1 : 0, padding: fit === "contain" ? 10 : 0 }} />
       )}
       {dim && <span className="pic-dim" aria-hidden="true" />}

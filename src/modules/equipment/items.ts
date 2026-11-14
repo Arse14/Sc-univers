@@ -50,16 +50,16 @@ export function loadCategories(minAt = 0): Promise<Loaded<Category[]>> {
   }, minAt);
 }
 
-export interface Item { id: number; name: string; company: string; size: string; excl: "" | "pledge" | "subscriber" | "concierge" }
+export interface Item { id: number; uuid: string; shot: string; name: string; company: string; size: string; excl: "" | "pledge" | "subscriber" | "concierge" }
 
 /** Les 6 dernières catégories ouvertes restent disponibles hors ligne. */
-const itemBucket = new Bucket<Item[]>("equip-items", TTL_STATIC, 6);
+const itemBucket = new Bucket<Item[]>("equip-items-v2", TTL_STATIC, 6);
 
 export function loadItems(idCategory: number, minAt = 0): Promise<Loaded<Item[]>> {
   return itemBucket.get(idCategory, async () => {
     const data = await uexGet(`/items?id_category=${idCategory}`);
     const out = data.map((i: Any): Item => ({
-      id: num(i.id), name: str(i.name), company: str(i.company_name), size: str(i.size),
+      id: num(i.id), uuid: str(i.uuid), shot: /^https:\/\//.test(str(i.screenshot)) ? str(i.screenshot) : "", name: str(i.name), company: str(i.company_name), size: str(i.size),
       excl: num(i.is_exclusive_pledge) === 1 ? "pledge" : num(i.is_exclusive_subscriber) === 1 ? "subscriber" : num(i.is_exclusive_concierge) === 1 ? "concierge" : "",
     }));
     out.sort((a, b) => a.name.localeCompare(b.name, "fr"));

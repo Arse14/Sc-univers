@@ -6,6 +6,10 @@ import {
   OTHER_SECTION, SECTIONS, WEAPON_FILTERS, attrLabel, catLabel, isWeaponCategory, loadCategories, loadItemDetail, loadItems,
   type Category, type Item, type ItemDetail,
 } from "./items";
+import { ItemThumb, useItemPic } from "./pics";
+import { Pic } from "../../components/Pic";
+import { WikeloView } from "./WikeloView";
+import { CONTRACTS } from "./wikelo";
 import "../market/market.css";
 
 const PAGE = 150;
@@ -20,6 +24,7 @@ type Async<T> =
 export function EquipmentPage() {
   const [cats, setCats] = useState<Async<Category[]>>({ state: "loading" });
   const [tick, setTick] = useState(0);
+  const [view, setView] = useState<"shops" | "wikelo">("shops");
   const [section, setSection] = useState<string>(SECTIONS[0].id);
   const [catId, setCatId] = useState<number | null>(null);
   const [items, setItems] = useState<Async<Item[]>>({ state: "idle" });
@@ -95,15 +100,23 @@ export function EquipmentPage() {
   useEffect(() => { setShown(PAGE); }, [q, company, wf, catId]);
 
   const item = itemId == null ? null : itemList.find((i) => i.id === itemId) ?? null;
-  const cols = hasSize ? "minmax(0, 2fr) minmax(0, 1.2fr) 70px" : "minmax(0, 2fr) minmax(0, 1.2fr)";
+  const itemPic = useItemPic(item);
+  const cols = hasSize ? "minmax(0, 2.4fr) minmax(0, 1fr) 70px" : "minmax(0, 2.4fr) minmax(0, 1fr)";
   const stale = (cats.state === "ok" && cats.stale) || (items.state === "ok" && items.stale);
 
   return (
     <>
       <PageHeader crumb="COMMERCE ▸ ÉQUIPEMENT" title="Équipement"
-        sub="Armures, armes, accessoires et composants : où les acheter, et à quel prix."
+        sub="Armures, armes, accessoires et composants en images : où les acheter, à quel prix, et ce que Wikelo échange."
         banner={{ src: MODULE_ART.equipment, kicker: "ÉQUIPEMENT ▸ BOUTIQUES EN JEU", text: "Choisis une catégorie, puis un objet : la fiche liste les boutiques qui le vendent, de la moins chère à la plus chère, d'après les relevés des joueurs." }} />
 
+      <div role="tablist" aria-label="Vue" className="mk-cats">
+        <button type="button" role="tab" aria-selected={view === "shops"} className={"tab" + (view === "shops" ? " active" : "")} onClick={() => setView("shops")}>Boutiques en jeu</button>
+        <button type="button" role="tab" aria-selected={view === "wikelo"} className={"tab" + (view === "wikelo" ? " active" : "")} onClick={() => setView("wikelo")}>Wikelo · {CONTRACTS.length} contrats</button>
+      </div>
+
+      {view === "wikelo" && <WikeloView />}
+      {view === "shops" && (<>
       <Note tag="⚠ PRIX COMMUNAUTAIRES">
         Données UEX (uexcorp.space), relevées en jeu par les joueurs : un objet sans boutique listée peut simplement ne pas avoir été relevé (ou ne s'obtenir qu'en butin).
         {stale && <> <b>Hors ligne : affichage du dernier cache.</b></>}
@@ -180,9 +193,12 @@ export function EquipmentPage() {
                         {filtered.slice(0, shown).map((i) => (
                           <button type="button" key={i.id} className={"row" + (i.id === itemId ? " active" : "")} style={{ gridTemplateColumns: cols }}
                             aria-pressed={i.id === itemId} onClick={() => setItemId(i.id)}>
-                            <span style={{ minWidth: 0 }}>
-                              <span className="cell-main" style={{ fontSize: 16 }}>{i.name}</span>
-                              {i.excl && <span className="mk-tag warn">{EXCL_FR[i.excl]}</span>}
+                            <span className="eq-name">
+                              <ItemThumb item={i} />
+                              <span style={{ minWidth: 0 }}>
+                                <span className="cell-main" style={{ fontSize: 16 }}>{i.name}</span>
+                                {i.excl && <span className="mk-tag warn">{EXCL_FR[i.excl]}</span>}
+                              </span>
                             </span>
                             <span className="cell-muted">{i.company || "—"}</span>
                             {hasSize && <span className="mk-num">{i.size || "—"}</span>}
@@ -201,6 +217,8 @@ export function EquipmentPage() {
                       {!item && <div className="hint">Choisis un objet dans la liste pour voir où l'acheter.</div>}
                       {item && (
                         <>
+                          {itemPic !== null && <Pic key={item.id} src={itemPic?.full ?? null} alt={item.name} ratio="16 / 10" fit="contain" className="eq-hero" />}
+                          {itemPic === null && <div className="hint">Pas encore d'image pour cet objet sur le wiki.</div>}
                           <div>
                             <div className="mono" style={{ fontSize: 11, letterSpacing: ".2em", color: "var(--cyan)" }}>
                               {catLabel(cat).toUpperCase()}{item.company ? ` · ${item.company.toUpperCase()}` : ""}{item.size ? ` · TAILLE ${item.size}` : ""}
@@ -261,6 +279,7 @@ export function EquipmentPage() {
           )}
         </>
       )}
+      </>)}
     </>
   );
 }
