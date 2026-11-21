@@ -161,6 +161,7 @@ export const MODULE_ART: Record<string, string> = {
   binds: SHIPS.avengerTitan,
   mining: SHIPS.prospectorSpace,
   reputation: PLACES.kareah,
+  ops: PLACES.ruinStation,
   blueprints: CRAFTING.fabricator,
   hangar: SHIPS.andromeda,
   market: PLACES.area18,

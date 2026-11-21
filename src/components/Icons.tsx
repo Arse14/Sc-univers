@@ -11,6 +11,7 @@ export function ModuleIcon({ id, size = 18 }: { id: ModuleId; size?: number }) {
     case "hangar": return <svg {...p}><path d="M3 12l9-7 9 7" /><path d="M5 11v9h14v-9" /><path d="M9 20v-5h6v5" /></svg>;
     case "mining": return <svg {...p}><path d="M4 20l9-9" /><path d="M13 11l3-3" /><path d="M8 5c3-1 7 0 10 3l2 2c-1-3-3-5-6-6" /><path d="M14 10l2 2" /></svg>;
     case "reputation": return <svg {...p}><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6Z" /><path d="M9 12l2 2 4-5" /></svg>;
+    case "ops": return <svg {...p}><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /><path d="M12 2v4M12 18v4M2 12h4M18 12h4" /></svg>;
     case "blueprints": return <svg {...p}><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9Z" /><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" /></svg>;
     case "market": return <svg {...p}><path d="M3 20h18" /><path d="M5 16l4-5 4 3 6-8" /><path d="M16 6h3v3" /></svg>;
     case "equipment": return <svg {...p}><path d="M5 12a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z" /><path d="M8 13h8" /><path d="M12 5v2" /></svg>;

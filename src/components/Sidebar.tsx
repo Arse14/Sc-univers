@@ -4,7 +4,7 @@ import { isTauri } from "../lib/tauri";
 import { APP_VERSION } from "../lib/version";
 import { Brand, ModuleIcon } from "./Icons";
 
-export type ModuleId = "news" | "starter" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "blueprints" | "market" | "equipment" | "map" | "settings";
+export type ModuleId = "news" | "starter" | "dashboard" | "binds" | "hangar" | "mining" | "reputation" | "ops" | "blueprints" | "market" | "equipment" | "map" | "settings";
 
 interface Item {
   id: ModuleId;
@@ -21,6 +21,7 @@ const ITEMS: Item[] = [
   { id: "hangar", label: "Hangar", ready: true, group: "univers" },
   { id: "mining", label: "Minage", ready: true, group: "univers" },
   { id: "reputation", label: "Réputations", ready: true, group: "univers" },
+  { id: "ops", label: "Opérations", ready: true, group: "univers" },
   { id: "blueprints", label: "Schémas", ready: true, group: "univers" },
   { id: "market", label: "Marché", ready: true, group: "univers" },
   { id: "equipment", label: "Équipement", ready: true, group: "univers" },

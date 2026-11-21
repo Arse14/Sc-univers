@@ -14,6 +14,7 @@ const StarterPage = lazy(() => import("./modules/starter/StarterPage").then((m) 
 const DashboardPage = lazy(() => import("./modules/dashboard/DashboardPage").then((m) => ({ default: m.DashboardPage })));
 const BindsPage = lazy(() => import("./modules/binds/BindsPage").then((m) => ({ default: m.BindsPage })));
 const MiningPage = lazy(() => import("./modules/mining/MiningPage").then((m) => ({ default: m.MiningPage })));
+const OpsPage = lazy(() => import("./modules/ops/OpsPage").then((m) => ({ default: m.OpsPage })));
 const ReputationPage = lazy(() => import("./modules/reputation/ReputationPage").then((m) => ({ default: m.ReputationPage })));
 const BlueprintsPage = lazy(() => import("./modules/blueprints/BlueprintsPage").then((m) => ({ default: m.BlueprintsPage })));
 const MapPage = lazy(() => import("./modules/map/MapPage").then((m) => ({ default: m.MapPage })));
@@ -56,6 +57,7 @@ export default function App() {
         {module === "binds" && <BindsPage />}
         {module === "mining" && <MiningPage />}
         {module === "reputation" && <ReputationPage />}
+        {module === "ops" && <OpsPage />}
         {module === "blueprints" && <BlueprintsPage />}
         {module === "hangar" && <HangarPage />}
         {module === "market" && <MarketPage />}
